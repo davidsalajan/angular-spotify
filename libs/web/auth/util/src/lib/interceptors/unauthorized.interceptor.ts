@@ -18,6 +18,11 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
     req: HttpRequest<Record<string, string>>,
     next: HttpHandler
   ): Observable<HttpEvent<Record<string, string>>> {
+    // Skip non-Spotify requests so their errors propagate normally
+    if (req.url.includes('lrclib.net')) {
+      return next.handle(req);
+    }
+
     return next.handle(req).pipe(
       catchError((err: HttpResponse<Record<string, string>>) => {
         if (err.status === 401) {

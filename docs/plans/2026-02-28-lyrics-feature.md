@@ -2,13 +2,29 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add synced lyrics display powered by Musixmatch, with auto-scroll, click-to-seek, and PiP support — mirroring the visualizer's architecture.
+**Goal:** Add synced lyrics display with auto-scroll, click-to-seek, and PiP support — mirroring the visualizer's architecture.
 
-**Architecture:** New `libs/web/lyrics/` domain with data-access (LyricsStore + MusixmatchApiService), feature (routed /lyrics page), and ui (lyrics-view, lyrics-pip, lyrics-toggle) libraries. Follows the same ComponentStore + route + PiP pattern as the visualizer.
+**Architecture:** New `libs/web/lyrics/` domain with data-access (LyricsStore + LrclibApiService), feature (routed /lyrics page), and ui (lyrics-view, lyrics-pip, lyrics-toggle) libraries. Follows the same ComponentStore + route + PiP pattern as the visualizer.
 
-**Tech Stack:** Angular 17, ngrx ComponentStore, Musixmatch API, TailwindCSS, RxJS
+**Tech Stack:** Angular 17, ngrx ComponentStore, LRCLIB API, TailwindCSS, RxJS
 
 **Design doc:** `docs/plans/2026-02-28-lyrics-feature-design.md`
+
+---
+
+> ### Post-Implementation Changes
+>
+> **Musixmatch → LRCLIB:** Musixmatch no longer accepts new developer signups. Replaced with [LRCLIB](https://lrclib.net) — free, no API key, provides synced (LRC format) and plain lyrics via `GET /api/get?track_name=...&artist_name=...`. Removed `musixmatchApiKey`/`musixmatchBaseURL` from `AppConfig` and environment files.
+>
+> **Timing fix:** The Spotify SDK only reports position on state changes, not continuously. Added `interpolatedPosition$` (100ms interval using `positionWithTimestamp$`) to keep lyrics in sync. The `stateTimestamp` is captured before the async `getVolume()` call to prevent 3-4s drift.
+>
+> **CORS fix:** Both auth and unauthorized interceptors now skip `lrclib.net` requests — auth to avoid sending the Spotify Authorization header, unauthorized to let 404 errors propagate normally.
+>
+> **404 handling:** Template handles `'idle'` and `'loading'` with spinner, `'error'` with "No lyrics available" message.
+>
+> **Navigation reset:** Toggle state resets when navigating away from `/lyrics`.
+>
+> **Styling:** Color-only transitions (no scale) for layout stability. Dimmed inactive lines for better active line contrast.
 
 ---
 

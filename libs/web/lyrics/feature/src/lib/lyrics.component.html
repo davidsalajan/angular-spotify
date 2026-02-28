@@ -1,11 +1,11 @@
 @if (status$ | async; as status) {
-  @if (status === 'loading') {
+  @if (status === 'loading' || status === 'idle') {
     <div class="lyrics-loading">
       <as-spinner></as-spinner>
     </div>
   } @else if (status === 'error') {
     <div class="lyrics-loading">
-      <p class="text-gray-400">No lyrics available for this track.</p>
+      <p class="text-2xl text-gray-400">No lyrics available for this track.</p>
     </div>
   } @else {
     <as-lyrics-view
