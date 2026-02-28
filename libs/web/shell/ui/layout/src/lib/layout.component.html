@@ -9,3 +9,11 @@
 @if (showPiPVisualizer$ | async) {
   <as-web-visualizer-ui id="pip-visualizer"></as-web-visualizer-ui>
 }
+@if (showPiPLyrics$ | async) {
+  <as-lyrics-pip
+    id="pip-lyrics"
+    [lyrics]="lyrics$ | async"
+    [activeLine]="(activeLine$ | async) ?? -1"
+    (expand)="lyricsStore.setVisibility({ isVisible: true })"
+  ></as-lyrics-pip>
+}

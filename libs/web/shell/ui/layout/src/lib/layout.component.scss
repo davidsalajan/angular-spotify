@@ -21,3 +21,10 @@
   border-radius: 4px;
   @apply shadow-md;
 }
+
+#pip-lyrics {
+  position: fixed;
+  right: 20px;
+  bottom: 330px;
+  z-index: 10;
+}
