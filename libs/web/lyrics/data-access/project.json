@@ -1,0 +1,19 @@
+{
+  "name": "web-lyrics-data-access",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/lyrics/data-access/src",
+  "projectType": "library",
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/web/lyrics/data-access"],
+      "options": {
+        "jestConfig": "libs/web/lyrics/data-access/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["type:data-access", "scope:web"]
+}

@@ -9,6 +9,7 @@ export class RouterUtil {
     Visualizer: 'visualizer',
     Browse: 'browse',
     CategoryId: 'categoryId',
+    Lyrics: 'lyrics',
     SearchQueryParam: 'q'
   };
 }

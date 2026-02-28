@@ -144,6 +144,17 @@
       ],
       "@angular-spotify/web/tracks/data-access": ["libs/web/tracks/data-access/src/index.ts"],
       "@angular-spotify/web/tracks/feature": ["libs/web/tracks/feature/src/index.ts"],
+      "@angular-spotify/web/lyrics/data-access": ["libs/web/lyrics/data-access/src/index.ts"],
+      "@angular-spotify/web/lyrics/feature": ["libs/web/lyrics/feature/src/index.ts"],
+      "@angular-spotify/web/lyrics/ui/lyrics-view": [
+        "libs/web/lyrics/ui/lyrics-view/src/index.ts"
+      ],
+      "@angular-spotify/web/lyrics/ui/lyrics-pip": [
+        "libs/web/lyrics/ui/lyrics-pip/src/index.ts"
+      ],
+      "@angular-spotify/web/lyrics/ui/lyrics-toggle": [
+        "libs/web/lyrics/ui/lyrics-toggle/src/index.ts"
+      ],
       "@angular-spotify/web/visualizer/data-access": [
         "libs/web/visualizer/data-access/src/index.ts"
       ],
