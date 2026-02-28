@@ -1,0 +1,20 @@
+.lyrics-pip {
+  @apply p-3 rounded cursor-pointer;
+  background: rgba(var(--background-highlight), 0.95);
+  backdrop-filter: blur(8px);
+  max-width: 400px;
+
+  &:hover {
+    background: rgba(var(--background-highlight), 1);
+  }
+}
+
+.current-line {
+  @apply text-sm font-bold truncate;
+  color: rgb(var(--text-baseline));
+}
+
+.next-line {
+  @apply text-xs truncate mt-1;
+  color: rgba(var(--text-baseline), 0.5);
+}
