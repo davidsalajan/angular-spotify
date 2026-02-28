@@ -14,244 +14,38 @@
 
 ### Task 1: Scaffold lyrics library structure and config boilerplate
 
-Create all library directories, project.json files, tsconfig files, jest configs, eslint configs, and index.ts barrel files. Add path aliases to tsconfig.base.json. Update AppConfig and environment files for Musixmatch.
+Use `npx nx g @nx/angular:library` to generate all 5 libraries. This handles project.json, tsconfig files, jest config, eslint config, barrel exports, and path aliases automatically.
 
-**Files to create:**
+**Step 1: Generate libraries using Nx CLI**
 
-```
-libs/web/lyrics/data-access/
-  project.json, tsconfig.json, tsconfig.lib.json, tsconfig.spec.json,
-  jest.config.ts, .eslintrc.json, src/index.ts
+```bash
+# data-access lib (no component)
+npx nx g @nx/angular:library --name=data-access --directory=libs/web/lyrics/data-access \
+  --tags="type:data-access,scope:web" --prefix=as --skipModule --skipComponent \
+  --importPath=@angular-spotify/web/lyrics/data-access
 
-libs/web/lyrics/feature/
-  project.json, tsconfig.json, tsconfig.lib.json, tsconfig.spec.json,
-  jest.config.ts, .eslintrc.json, src/index.ts, src/test-setup.ts
+# feature lib
+npx nx g @nx/angular:library --name=feature --directory=libs/web/lyrics/feature \
+  --tags="type:feature,scope:web" --prefix=as --skipModule --skipComponent \
+  --importPath=@angular-spotify/web/lyrics/feature
 
-libs/web/lyrics/ui/lyrics-view/
-  project.json, tsconfig.json, tsconfig.lib.json, tsconfig.spec.json,
-  jest.config.ts, .eslintrc.json, src/index.ts, src/test-setup.ts
+# ui libs
+npx nx g @nx/angular:library --name=lyrics-view --directory=libs/web/lyrics/ui/lyrics-view \
+  --tags="type:ui,scope:web" --prefix=as --skipModule --skipComponent \
+  --importPath=@angular-spotify/web/lyrics/ui/lyrics-view
 
-libs/web/lyrics/ui/lyrics-pip/
-  project.json, tsconfig.json, tsconfig.lib.json, tsconfig.spec.json,
-  jest.config.ts, .eslintrc.json, src/index.ts, src/test-setup.ts
+npx nx g @nx/angular:library --name=lyrics-pip --directory=libs/web/lyrics/ui/lyrics-pip \
+  --tags="type:ui,scope:web" --prefix=as --skipModule --skipComponent \
+  --importPath=@angular-spotify/web/lyrics/ui/lyrics-pip
 
-libs/web/lyrics/ui/lyrics-toggle/
-  project.json, tsconfig.json, tsconfig.lib.json, tsconfig.spec.json,
-  jest.config.ts, .eslintrc.json, src/index.ts, src/test-setup.ts
-```
-
-**Files to modify:**
-
-- `tsconfig.base.json` — add 5 path aliases
-- `libs/web/shared/app-config/src/lib/app.config.ts` — add Musixmatch fields
-- `apps/angular-spotify/src/environments/environment.ts` — add Musixmatch config
-- `apps/angular-spotify/src/environments/environment.prod.ts` — add Musixmatch config
-
-**Step 1: Create data-access library scaffold**
-
-Use the visualizer data-access as a template. All config files follow the same pattern but with adjusted names and paths.
-
-`libs/web/lyrics/data-access/project.json`:
-```json
-{
-  "name": "web-lyrics-data-access",
-  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/web/lyrics/data-access/src",
-  "projectType": "library",
-  "targets": {
-    "lint": { "executor": "@nx/eslint:lint" },
-    "test": {
-      "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/libs/web/lyrics/data-access"],
-      "options": { "jestConfig": "libs/web/lyrics/data-access/jest.config.ts" }
-    }
-  },
-  "tags": ["type:data-access", "scope:web"]
-}
+npx nx g @nx/angular:library --name=lyrics-toggle --directory=libs/web/lyrics/ui/lyrics-toggle \
+  --tags="type:ui,scope:web" --prefix=as --skipModule --skipComponent \
+  --importPath=@angular-spotify/web/lyrics/ui/lyrics-toggle
 ```
 
-`libs/web/lyrics/data-access/jest.config.ts`:
-```typescript
-/* eslint-disable */
-export default {
-  displayName: 'web-lyrics-data-access',
-  preset: '../../../../jest.preset.js',
-  globals: {
-    'ts-jest': { tsconfig: '<rootDir>/tsconfig.spec.json' }
-  },
-  testEnvironment: 'node',
-  transform: {
-    '^.+\\.[tj]sx?$': 'ts-jest'
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-  coverageDirectory: '../../../../coverage/libs/web/lyrics/data-access'
-};
-```
+After generation, verify the path aliases were added to `tsconfig.base.json` and the project names match the naming convention (e.g., `web-lyrics-data-access`). Adjust project names in `project.json` if the generator uses different names.
 
-`libs/web/lyrics/data-access/tsconfig.json`:
-```json
-{
-  "extends": "../../../../tsconfig.base.json",
-  "files": [],
-  "include": [],
-  "references": [
-    { "path": "./tsconfig.lib.json" },
-    { "path": "./tsconfig.spec.json" }
-  ],
-  "compilerOptions": { "target": "es2020" }
-}
-```
-
-`libs/web/lyrics/data-access/tsconfig.lib.json`:
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "../../../../dist/out-tsc",
-    "types": [],
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["**/*.spec.ts", "**/*.test.ts", "jest.config.ts"]
-}
-```
-
-`libs/web/lyrics/data-access/tsconfig.spec.json`:
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "../../../../dist/out-tsc",
-    "module": "commonjs",
-    "types": ["jest", "node"]
-  },
-  "include": [
-    "**/*.spec.ts", "**/*.test.ts", "**/*.spec.tsx", "**/*.test.tsx",
-    "**/*.spec.js", "**/*.test.js", "**/*.spec.jsx", "**/*.test.jsx",
-    "**/*.d.ts", "jest.config.ts"
-  ]
-}
-```
-
-`libs/web/lyrics/data-access/.eslintrc.json`:
-```json
-{
-  "extends": ["../../../../.eslintrc.json"],
-  "ignorePatterns": ["!**/*"],
-  "rules": {},
-  "overrides": [
-    { "files": ["*.ts", "*.tsx", "*.js", "*.jsx"], "rules": {} },
-    { "files": ["*.ts", "*.tsx"], "rules": {} },
-    { "files": ["*.js", "*.jsx"], "rules": {} }
-  ]
-}
-```
-
-`libs/web/lyrics/data-access/src/index.ts`:
-```typescript
-export * from './lib/lyrics.models';
-export * from './lib/musixmatch-api.service';
-export * from './lib/lyrics.store';
-```
-
-**Step 2: Create feature library scaffold**
-
-`libs/web/lyrics/feature/project.json`:
-```json
-{
-  "name": "web-lyrics-feature",
-  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
-  "projectType": "library",
-  "sourceRoot": "libs/web/lyrics/feature/src",
-  "prefix": "as",
-  "targets": {
-    "lint": { "executor": "@nx/eslint:lint" },
-    "test": {
-      "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/libs/web/lyrics/feature"],
-      "options": { "jestConfig": "libs/web/lyrics/feature/jest.config.ts" }
-    }
-  },
-  "tags": ["type:feature", "scope:web"]
-}
-```
-
-`libs/web/lyrics/feature/jest.config.ts`:
-```typescript
-/* eslint-disable */
-export default {
-  displayName: 'web-lyrics-feature',
-  preset: '../../../../jest.preset.js',
-  setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-  globals: {
-    'ts-jest': {
-      stringifyContentPathRegex: '\\.(html|svg)$',
-      tsconfig: '<rootDir>/tsconfig.spec.json'
-    }
-  },
-  coverageDirectory: '../../../../coverage/libs/web/lyrics/feature',
-  snapshotSerializers: [
-    'jest-preset-angular/build/serializers/no-ng-attributes',
-    'jest-preset-angular/build/serializers/ng-snapshot',
-    'jest-preset-angular/build/serializers/html-comment'
-  ],
-  transform: {
-    '^.+.(ts|mjs|js|html)$': 'jest-preset-angular'
-  },
-  transformIgnorePatterns: ['node_modules/(?!.*.mjs$)']
-};
-```
-
-`libs/web/lyrics/feature/src/test-setup.ts`:
-```typescript
-import 'jest-preset-angular/setup-jest';
-```
-
-`libs/web/lyrics/feature/src/index.ts`:
-```typescript
-export * from './lib/lyrics.module';
-```
-
-Tsconfig files follow the same pattern as data-access (copy and adjust).
-
-**Step 3: Create UI library scaffolds** (lyrics-view, lyrics-pip, lyrics-toggle)
-
-Each follows the same Angular component library pattern as the feature lib (with `jest-preset-angular`, `test-setup.ts`, prefix `as`). Use `type:ui` tag in project.json.
-
-Project names: `web-lyrics-ui-lyrics-view`, `web-lyrics-ui-lyrics-pip`, `web-lyrics-ui-lyrics-toggle`.
-
-The `.eslintrc.json` files use relative depth `../../../../../.eslintrc.json` for ui libs (5 levels deep).
-
-`libs/web/lyrics/ui/lyrics-toggle/src/index.ts`:
-```typescript
-export * from './lib/lyrics-toggle.module';
-```
-
-`libs/web/lyrics/ui/lyrics-view/src/index.ts`:
-```typescript
-export * from './lib/lyrics-view.module';
-```
-
-`libs/web/lyrics/ui/lyrics-pip/src/index.ts`:
-```typescript
-export * from './lib/lyrics-pip.module';
-```
-
-**Step 4: Add path aliases to tsconfig.base.json**
-
-Add to the `paths` object in `tsconfig.base.json`:
-```json
-"@angular-spotify/web/lyrics/data-access": ["libs/web/lyrics/data-access/src/index.ts"],
-"@angular-spotify/web/lyrics/feature": ["libs/web/lyrics/feature/src/index.ts"],
-"@angular-spotify/web/lyrics/ui/lyrics-view": ["libs/web/lyrics/ui/lyrics-view/src/index.ts"],
-"@angular-spotify/web/lyrics/ui/lyrics-pip": ["libs/web/lyrics/ui/lyrics-pip/src/index.ts"],
-"@angular-spotify/web/lyrics/ui/lyrics-toggle": ["libs/web/lyrics/ui/lyrics-toggle/src/index.ts"]
-```
-
-**Step 5: Update AppConfig and environment files**
+**Step 2: Update AppConfig and environment files**
 
 Modify `libs/web/shared/app-config/src/lib/app.config.ts`:
 ```typescript
@@ -283,7 +77,7 @@ export const environment = {
 };
 ```
 
-**Step 6: Add `Lyrics` to RouterUtil**
+**Step 3: Add `Lyrics` to RouterUtil**
 
 Modify `libs/web/shared/utils/src/lib/router-util.ts`:
 ```typescript
@@ -296,12 +90,12 @@ export class RouterUtil {
 }
 ```
 
-**Step 7: Verify the scaffold compiles**
+**Step 4: Verify the scaffold compiles**
 
 Run: `npx nx lint web-lyrics-data-access`
-Expected: PASS (no source files yet, just config)
+Expected: PASS
 
-**Step 8: Commit**
+**Step 5: Commit**
 
 ```bash
 git add libs/web/lyrics/ tsconfig.base.json \
