@@ -15,35 +15,14 @@ export interface LyricsState {
   currentTrackId: string | null;
 }
 
-// Musixmatch API response types
-export interface MusixmatchSubtitleResponse {
-  message: {
-    header: { status_code: number };
-    body: {
-      subtitle: {
-        subtitle_body: string; // JSON string of [{time: {total, minutes, seconds, hundredths}, text}]
-      };
-    };
-  };
-}
-
-export interface MusixmatchLyricsResponse {
-  message: {
-    header: { status_code: number };
-    body: {
-      lyrics: {
-        lyrics_body: string; // Plain text with \n line breaks
-      };
-    };
-  };
-}
-
-export interface MusixmatchSubtitleLine {
-  text: string;
-  time: {
-    total: number; // seconds as float
-    minutes: number;
-    seconds: number;
-    hundredths: number;
-  };
+// LRCLIB API response type
+export interface LrclibResponse {
+  id: number;
+  trackName: string;
+  artistName: string;
+  albumName: string;
+  duration: number;
+  instrumental: boolean;
+  plainLyrics: string | null;
+  syncedLyrics: string | null; // LRC format: [mm:ss.xx] text
 }

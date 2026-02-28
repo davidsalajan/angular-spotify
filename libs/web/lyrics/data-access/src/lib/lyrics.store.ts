@@ -14,7 +14,7 @@ import {
   tap,
   withLatestFrom
 } from 'rxjs/operators';
-import { MusixmatchApiService } from './musixmatch-api.service';
+import { LrclibApiService } from './lrclib-api.service';
 import { LyricsState } from './lyrics.models';
 
 const initialState: LyricsState = {
@@ -33,7 +33,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
     private router: Router,
     private location: Location,
     private playbackStore: PlaybackStore,
-    private musixmatchApi: MusixmatchApiService
+    private lrclibApi: LrclibApiService
   ) {
     super(initialState);
     this.showLyricsAsPiP$();
@@ -107,7 +107,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
       filter(([{ trackId }, state]) => trackId !== state.currentTrackId),
       tap(() => this.patchState({ status: 'loading' })),
       switchMap(([{ trackId, trackName, artistName }]) =>
-        this.musixmatchApi.getLyrics(trackName, artistName).pipe(
+        this.lrclibApi.getLyrics(trackName, artistName).pipe(
           tap(({ lyrics, isSynced }) => {
             this.patchState({
               lyrics,

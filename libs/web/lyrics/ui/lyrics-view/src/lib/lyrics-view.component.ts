@@ -38,13 +38,16 @@ export class LyricsViewComponent implements OnChanges {
   }
 
   private scrollToActiveLine(): void {
-    const lineElements = this.lyricLines?.toArray();
-    if (!lineElements || !lineElements[this.activeLine]) {
-      return;
-    }
-    lineElements[this.activeLine].nativeElement.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
+    // Defer scroll to after Angular has updated the DOM
+    setTimeout(() => {
+      const lineElements = this.lyricLines?.toArray();
+      if (!lineElements || !lineElements[this.activeLine]) {
+        return;
+      }
+      lineElements[this.activeLine].nativeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
     });
   }
 }
