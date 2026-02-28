@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lyrics-container {
+  @apply w-full h-full overflow-y-auto px-8 py-12;
+  background: rgb(var(--background-baseline));
+}
+
+.lyrics-scroll {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.lyric-line {
+  @apply text-2xl font-bold py-2 transition-all duration-300;
+  color: rgba(var(--text-baseline), 0.4);
+  line-height: 1.6;
+
+  &.synced {
+    cursor: pointer;
+
+    &:hover {
+      color: rgba(var(--text-baseline), 0.7);
+    }
+  }
+
+  &.active {
+    color: rgb(var(--text-baseline));
+    @apply text-3xl;
+  }
+
+  &.past {
+    color: rgba(var(--text-baseline), 0.3);
+  }
+}
+
+.no-lyrics {
+  @apply flex items-center justify-center h-full;
+
+  p {
+    @apply text-xl;
+    color: rgba(var(--text-baseline), 0.5);
+  }
+}
