@@ -15,7 +15,7 @@
         <svg-icon
           class="transition-all"
           [size]="'lg'"
-          [key]="link.isActive && item.iconSelected ? item.iconSelected : item.icon!"
+          [key]="$any(link.isActive && item.iconSelected ? item.iconSelected : item.icon)"
           title="duration"
         ></svg-icon>
         {{ item.label }}

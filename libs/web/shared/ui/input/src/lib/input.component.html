@@ -5,7 +5,7 @@
   >
   @if (icon) {
     <div class="input-icon-container" [style.width.px]="iconContainerWidth">
-      <svg-icon [key]="icon" [size]="iconSize" color="black"> </svg-icon>
+      <svg-icon [key]="$any(icon)" [size]="iconSize" color="black"> </svg-icon>
     </div>
   }
 
