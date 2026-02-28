@@ -9,11 +9,13 @@ import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 })
 export class LyricsToggleComponent {
   isLyricsOn$ = this.lyricsStore.isVisible$;
+  private isVisible = false;
 
-  constructor(private lyricsStore: LyricsStore) {}
+  constructor(private lyricsStore: LyricsStore) {
+    this.isLyricsOn$.subscribe((v) => (this.isVisible = v));
+  }
 
   toggle(): void {
-    const isVisible = this.lyricsStore.get().isVisible;
-    this.lyricsStore.setVisibility({ isVisible: !isVisible });
+    this.lyricsStore.setVisibility({ isVisible: !this.isVisible });
   }
 }
