@@ -107,7 +107,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
           this.setState({ ...state, isFirstTime: false, isVisible: true, isShownAsPiP: false });
         }
         if (!isAtLyricsRoute && !state.isFirstTime) {
-          this.setState({ ...state, isVisible: false, isShownAsPiP: false, isFirstTime: true });
+          this.setState({ ...state, isVisible: true, isShownAsPiP: true });
         }
       })
     )
@@ -148,7 +148,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
   readonly setVisibility = this.effect<{ isVisible: boolean }>((params$) =>
     params$.pipe(
       tap(({ isVisible }) => {
-        this.patchState({ isVisible, isFirstTime: !isVisible });
+        this.patchState({ isVisible, isShownAsPiP: false, isFirstTime: !isVisible });
       }),
       map(() => this.get()),
       tap((state) => this.handleStateChange(state))

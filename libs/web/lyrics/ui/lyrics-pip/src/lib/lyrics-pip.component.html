@@ -1,4 +1,12 @@
-<div class="lyrics-pip" (click)="expand.emit()">
+<div class="lyrics-pip">
+  <div class="actions">
+    <button (click)="expand.emit()" class="action-btn" title="Expand">
+      <svg-icon [key]="'expand'"></svg-icon>
+    </button>
+    <button (click)="closePip.emit()" class="action-btn" title="Close">
+      <svg-icon [key]="'times'"></svg-icon>
+    </button>
+  </div>
   <p class="current-line">{{ currentLine }}</p>
   <p class="next-line">{{ nextLine }}</p>
 </div>

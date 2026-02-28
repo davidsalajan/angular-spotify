@@ -25,6 +25,10 @@
 #pip-lyrics {
   position: fixed;
   right: 20px;
-  bottom: 330px;
+  bottom: 95px;
   z-index: 10;
+
+  &.above-visualizer {
+    bottom: 330px;
+  }
 }

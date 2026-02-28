@@ -1,20 +1,58 @@
 .lyrics-pip {
-  @apply p-3 rounded cursor-pointer;
+  @apply p-4 rounded relative;
   background: rgba(var(--background-highlight), 0.95);
   backdrop-filter: blur(8px);
-  max-width: 400px;
+  min-width: 300px;
+  max-width: 300px;
+  min-height: 80px;
 
   &:hover {
     background: rgba(var(--background-highlight), 1);
+
+    .actions {
+      opacity: 1;
+    }
+  }
+}
+
+.actions {
+  @apply absolute p-1;
+  top: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  .action-btn {
+    @apply ml-1;
+    border: none;
+    border-radius: 50%;
+    @apply bg-black bg-opacity-70 w-7 h-7;
+    color: #fff;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+
+    &:hover {
+      @apply bg-opacity-40;
+    }
   }
 }
 
 .current-line {
-  @apply text-sm font-bold truncate;
+  @apply text-base font-bold;
   color: rgb(var(--text-baseline));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .next-line {
-  @apply text-xs truncate mt-1;
+  @apply text-sm mt-2;
   color: rgba(var(--text-baseline), 0.5);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
