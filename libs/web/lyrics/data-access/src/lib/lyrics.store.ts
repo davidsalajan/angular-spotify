@@ -4,12 +4,13 @@ import { Location } from '@angular/common';
 import { ComponentStore } from '@ngrx/component-store';
 import { PlaybackStore } from '@angular-spotify/web/shared/data-access/store';
 import { RouterUtil, StringUtil } from '@angular-spotify/web/shared/utils';
-import { EMPTY, Observable, combineLatest } from 'rxjs';
+import { EMPTY, Observable, combineLatest, interval } from 'rxjs';
 import {
   catchError,
   distinctUntilChanged,
   filter,
   map,
+  startWith,
   switchMap,
   tap,
   withLatestFrom
@@ -50,11 +51,30 @@ export class LyricsStore extends ComponentStore<LyricsState> {
     (s) => s.isVisible && s.isShownAsPiP && s.lyrics !== null && s.lyrics.length > 0
   );
 
+  // Interpolated position that ticks every 100ms during playback.
+  // The Spotify SDK only reports position on state changes (seek, pause, play),
+  // so we estimate current position using the SDK's timestamp to avoid
+  // drift caused by async processing delays (e.g. await getVolume()).
+  private readonly interpolatedPosition$: Observable<number> = combineLatest([
+    this.playbackStore.positionWithTimestamp$,
+    this.playbackStore.isPlaying$
+  ]).pipe(
+    switchMap(([{ position, timestamp }, isPlaying]) => {
+      if (!isPlaying) {
+        return [position];
+      }
+      return interval(100).pipe(
+        startWith(0),
+        map(() => position + (Date.now() - timestamp))
+      );
+    })
+  );
+
   // Active line: find the last lyric line whose time <= current playback position
   readonly activeLine$: Observable<number> = combineLatest([
     this.lyrics$,
     this.isSynced$,
-    this.playbackStore.position$
+    this.interpolatedPosition$
   ]).pipe(
     map(([lyrics, isSynced, position]) => {
       if (!lyrics || !isSynced || position == null) {
@@ -87,7 +107,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
           this.setState({ ...state, isFirstTime: false, isVisible: true, isShownAsPiP: false });
         }
         if (!isAtLyricsRoute && !state.isFirstTime) {
-          this.setState({ ...state, isShownAsPiP: true });
+          this.setState({ ...state, isVisible: false, isShownAsPiP: false, isFirstTime: true });
         }
       })
     )
