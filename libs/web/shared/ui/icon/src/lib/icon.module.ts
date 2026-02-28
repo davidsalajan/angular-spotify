@@ -18,6 +18,7 @@ import { asHomeIcon } from './svg/home';
 import { asHouseDoorIcon } from './svg/house-door';
 import { asHouseDoorFillIcon } from './svg/house-door-fill';
 import { asJournalIcon } from './svg/journal';
+import { asMicIcon } from './svg/mic';
 import { asMusicNoteBeamedIcon } from './svg/music-note-beamed';
 import { asMusicNoteListIcon } from './svg/music-note-list';
 import { asPauseIcon } from './svg/pause';
@@ -55,6 +56,7 @@ import { asVolumeMuteIcon } from './svg/volume-mute';
       asHouseDoorFillIcon,
       asHouseDoorIcon,
       asJournalIcon,
+      asMicIcon,
       asMusicNoteBeamedIcon,
       asMusicNoteListIcon,
       asPauseIcon,
