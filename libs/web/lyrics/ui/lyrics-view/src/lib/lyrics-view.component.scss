@@ -23,7 +23,8 @@
     cursor: pointer;
 
     &:hover {
-      color: rgba(var(--text-baseline), 0.5);
+      color: rgb(var(--text-baseline));
+      text-decoration: underline;
     }
   }
 
