@@ -1,0 +1,14 @@
+@if (status$ | async; as status) {
+  @if (status === 'loading') {
+    <div class="lyrics-loading">
+      <as-spinner></as-spinner>
+    </div>
+  } @else {
+    <as-lyrics-view
+      [lyrics]="lyrics$ | async"
+      [activeLine]="(activeLine$ | async) ?? -1"
+      [isSynced]="(isSynced$ | async) ?? false"
+      (seekTo)="onSeekTo($event)"
+    ></as-lyrics-view>
+  }
+}
