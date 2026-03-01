@@ -7,7 +7,11 @@
 
 import * as Sketch from 'sketch-js';
 import { VisualizerType } from './const';
+import { CircularRingRenderer } from './circular-ring-renderer';
+import { LissajousRenderer } from './lissajous-renderer';
 import { ParticlesRenderer } from './particles-renderer';
+import { RadialSpikesRenderer } from './radial-spikes-renderer';
+import { SoundLinesRenderer } from './sound-lines-renderer';
 import { AudioData, VisualizerRenderer } from './visualizer-renderer.interface';
 import { WaveformBarsRenderer } from './waveform-bars-renderer';
 
@@ -15,6 +19,14 @@ export function createRenderer(type: VisualizerType): VisualizerRenderer {
   switch (type) {
     case VisualizerType.WaveformBars:
       return new WaveformBarsRenderer();
+    case VisualizerType.CircularRing:
+      return new CircularRingRenderer();
+    case VisualizerType.Lissajous:
+      return new LissajousRenderer();
+    case VisualizerType.RadialSpikes:
+      return new RadialSpikesRenderer();
+    case VisualizerType.SoundLines:
+      return new SoundLinesRenderer();
     case VisualizerType.Particles:
     default:
       return new ParticlesRenderer();
@@ -41,7 +53,7 @@ export const initVisualizer = (
       renderer.setup(this.width, this.height);
     },
     draw() {
-      renderer.draw(this, this.width, this.height);
+      renderer.draw(this, container.clientWidth, container.clientHeight);
     }
   });
 

@@ -4,3 +4,7 @@ export * from './lib/visualizer-renderer.interface';
 export * from './lib/const';
 export * from './lib/particles-renderer';
 export * from './lib/waveform-bars-renderer';
+export * from './lib/circular-ring-renderer';
+export * from './lib/lissajous-renderer';
+export * from './lib/radial-spikes-renderer';
+export * from './lib/sound-lines-renderer';
