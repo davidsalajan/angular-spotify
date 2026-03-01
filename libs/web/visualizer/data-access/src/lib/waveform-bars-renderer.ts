@@ -2,8 +2,8 @@ import { COLORS } from './const';
 import { AudioData, VisualizerRenderer } from './visualizer-renderer.interface';
 
 const NUM_BARS = 12;
-const BAR_SMOOTHING = 0.3;
-const BAR_DECAY = 0.95;
+const RISE_SPEED = 0.3; // how fast bars rise toward target
+const FALL_SPEED = 0.3; // how fast bars fall back down (slower = smoother)
 const GLOW_BLUR = 15;
 const BAR_GAP_RATIO = 0.3; // gap between bars as ratio of bar width
 const MAX_HEIGHT_RATIO = 0.85; // max bar height as ratio of canvas height
@@ -12,15 +12,15 @@ const REFLECTION_ALPHA = 0.15;
 const REFLECTION_HEIGHT_RATIO = 0.3;
 
 export class WaveformBarsRenderer implements VisualizerRenderer {
-  private smoothedHeights: number[] = new Array(NUM_BARS).fill(0);
-  private decayHeights: number[] = new Array(NUM_BARS).fill(0);
+  private currentHeights: number[] = new Array(NUM_BARS).fill(0);
+  private targetHeights: number[] = new Array(NUM_BARS).fill(0);
   private currentEnergy = 0;
   private currentBeatPhase = 0;
   private barColors: string[] = [];
 
   setup(width: number, height: number): void {
-    this.smoothedHeights = new Array(NUM_BARS).fill(0);
-    this.decayHeights = new Array(NUM_BARS).fill(0);
+    this.currentHeights = new Array(NUM_BARS).fill(0);
+    this.targetHeights = new Array(NUM_BARS).fill(0);
     this.currentEnergy = 0;
     this.currentBeatPhase = 0;
     // Assign colors from the palette, cycling if needed
@@ -33,9 +33,7 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
 
     for (let i = 0; i < NUM_BARS; i++) {
       const pitch = audioData.pitches[i] ?? 0;
-      // Target height: pitch value scaled by energy
-      const target = pitch * (0.3 + audioData.energy * 0.7);
-      this.decayHeights[i] = Math.max(this.decayHeights[i], target);
+      this.targetHeights[i] = pitch * (0.3 + audioData.energy * 0.7);
     }
   }
 
@@ -52,13 +50,14 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
     const beatPulse = 1.0 + Math.max(0, 1.0 - this.currentBeatPhase * 4) * 0.08;
 
     for (let i = 0; i < NUM_BARS; i++) {
-      // Smooth animation
-      this.smoothedHeights[i] += (this.decayHeights[i] - this.smoothedHeights[i]) * BAR_SMOOTHING;
-      this.decayHeights[i] *= BAR_DECAY;
+      // Smooth lerp: rise fast, fall gently
+      const diff = this.targetHeights[i] - this.currentHeights[i];
+      const speed = diff > 0 ? RISE_SPEED : FALL_SPEED;
+      this.currentHeights[i] += diff * speed;
 
       const barHeight = Math.max(
         height * MIN_HEIGHT_RATIO,
-        this.smoothedHeights[i] * height * MAX_HEIGHT_RATIO * beatPulse
+        this.currentHeights[i] * height * MAX_HEIGHT_RATIO * beatPulse
       );
 
       const x = startX + i * (barWidth + gap);
@@ -95,7 +94,7 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
   }
 
   destroy(): void {
-    this.smoothedHeights = [];
-    this.decayHeights = [];
+    this.currentHeights = [];
+    this.targetHeights = [];
   }
 }
