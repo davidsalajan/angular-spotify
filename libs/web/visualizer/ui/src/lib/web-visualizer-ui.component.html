@@ -1,4 +1,13 @@
 <div class="visualizer-actions-wrapper">
+  <select
+    class="visualizer-select"
+    [ngModel]="visualizerType$ | ngrxPush"
+    (ngModelChange)="onVisualizerTypeChange($event)"
+  >
+    <option *ngFor="let type of visualizerTypes" [ngValue]="type">
+      {{ visualizerTypeLabels[type] }}
+    </option>
+  </select>
   <button
     *ngrxLet="isVisualizerShownAsPiP$ as isShownAsPiP"
     (click)="togglePiP()"

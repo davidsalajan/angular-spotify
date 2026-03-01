@@ -26,3 +26,13 @@ export const COLORS = [
   '#45CB85'
 ];
 export const TWO_PI = Math.PI * 2;
+
+export enum VisualizerType {
+  Particles = 'particles',
+  WaveformBars = 'waveform-bars'
+}
+
+export const VISUALIZER_TYPE_LABELS: Record<VisualizerType, string> = {
+  [VisualizerType.Particles]: 'Particles',
+  [VisualizerType.WaveformBars]: 'Waveform Bars'
+};

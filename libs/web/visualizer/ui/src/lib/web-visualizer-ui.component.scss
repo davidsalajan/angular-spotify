@@ -8,8 +8,27 @@
 }
 
 .visualizer-actions-wrapper {
-  @apply absolute p-2;
+  @apply absolute p-2 flex items-center;
   right: 0px;
+  z-index: 10;
+
+  .visualizer-select {
+    @apply ml-2 text-white text-xs px-2 py-1 rounded;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    outline: none;
+    appearance: auto;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    option {
+      background: #282828;
+      color: #fff;
+    }
+  }
 
   .action-btn {
     @apply ml-2;
