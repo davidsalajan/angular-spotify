@@ -1,6 +1,7 @@
 import { loadPlaylists } from '@angular-spotify/web/playlist/data-access';
 import { PlaybackStore } from '@angular-spotify/web/shared/data-access/store';
 import { VisualizerStore } from '@angular-spotify/web/visualizer/data-access';
+import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { filter, map } from 'rxjs/operators';
@@ -13,6 +14,9 @@ import { filter, map } from 'rxjs/operators';
 })
 export class LayoutComponent implements OnInit {
   showPiPVisualizer$ = this.visualizerStore.showPiPVisualizer$;
+  showPiPLyrics$ = this.lyricsStore.showPiPLyrics$;
+  lyrics$ = this.lyricsStore.lyrics$;
+  activeLine$ = this.lyricsStore.activeLine$;
   currentAlbumCoverUrl$ = this.playbackStore.currentTrack$.pipe(
     map((track) => track?.album?.images[0]?.url),
     filter((imageUrl) => !!imageUrl)
@@ -21,7 +25,8 @@ export class LayoutComponent implements OnInit {
   constructor(
     private playbackStore: PlaybackStore,
     private store: Store,
-    private visualizerStore: VisualizerStore
+    private visualizerStore: VisualizerStore,
+    public lyricsStore: LyricsStore
   ) {}
 
   ngOnInit(): void {

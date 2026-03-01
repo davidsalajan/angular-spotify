@@ -1,0 +1,9 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lyrics-loading {
+  @apply flex items-center justify-center w-full h-full;
+}

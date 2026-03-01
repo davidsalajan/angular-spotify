@@ -77,9 +77,11 @@ export class PlaybackService {
         console.info('[Angular Spotify] No player info!');
         return;
       }
+      const stateTimestamp = Date.now(); // capture before async getVolume()
       this.setAppTitle(state);
       this.playbackStore.patchState({
         data: state,
+        stateTimestamp,
         volume: await player.getVolume()
       });
       const currentTrackId = state.track_window?.current_track?.id;

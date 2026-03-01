@@ -6,6 +6,7 @@ import { TrackCurrentInfoModule } from '@angular-spotify/web/shared/ui/track-cur
 import { PlayerPlaybackModule } from '@angular-spotify/web/shell/ui/player-playback';
 import { PlayerVolumeModule } from '@angular-spotify/web/shell/ui/player-volume';
 import { VisualizationToggleModule } from '@angular-spotify/web/shell/ui/visualization-toggle';
+import { LyricsToggleModule } from '@angular-spotify/web/lyrics/ui/lyrics-toggle';
 @NgModule({
   imports: [
     CommonModule,
@@ -13,7 +14,8 @@ import { VisualizationToggleModule } from '@angular-spotify/web/shell/ui/visuali
     PlayerPlaybackModule,
     TrackCurrentInfoModule,
     PlayerVolumeModule,
-    VisualizationToggleModule
+    VisualizationToggleModule,
+    LyricsToggleModule
   ],
   declarations: [NowPlayingBarComponent],
   exports: [NowPlayingBarComponent]

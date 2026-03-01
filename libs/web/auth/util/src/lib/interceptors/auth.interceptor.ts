@@ -15,8 +15,8 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private authStore: AuthStore) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Skip auth interceptor for token exchange endpoint
-    if (req.url.includes('accounts.spotify.com/api/token')) {
+    // Skip auth interceptor for non-Spotify endpoints
+    if (req.url.includes('accounts.spotify.com/api/token') || req.url.includes('lrclib.net')) {
       return next.handle(req);
     }
 

@@ -1,7 +1,7 @@
 @if (volumeIcon$ | async; as volumeIcon) {
   <svg-icon
     class="control-button hover:text-white"
-    [key]="volumeIcon.icon"
+    [key]="$any(volumeIcon.icon)"
     [title]="volumeIcon.title"
     (click)="toggleMute()"
     >

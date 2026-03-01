@@ -18,6 +18,7 @@ interface PlaybackState extends GenericState<Spotify.PlaybackState> {
   analysis: SpotifyApiAudioAnalysisResponse;
   trackAnalysisId: string;
   isAnalysisLoading: boolean;
+  stateTimestamp: number; // Date.now() when player_state_changed fired
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,6 +62,10 @@ export class PlaybackStore extends ComponentStore<PlaybackState> {
     })
   );
   readonly position$ = this.playback$.pipe(map((data) => data?.position));
+  readonly positionWithTimestamp$ = this.select((s) => ({
+    position: s.data?.position ?? 0,
+    timestamp: s.stateTimestamp || Date.now()
+  }));
   readonly volume$ = this.select((s) => s.volume);
   readonly isPlaying$ = this.playback$.pipe(
     map((data) => {

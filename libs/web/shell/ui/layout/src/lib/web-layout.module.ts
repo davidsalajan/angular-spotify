@@ -10,6 +10,7 @@ import { NowPlayingBarModule } from '@angular-spotify/web/shell/ui/now-playing-b
 import { UnauthorizedModalModule } from '@angular-spotify/web/auth/ui/unauthorized-modal';
 import { AlbumArtOverlayModule } from '@angular-spotify/web/shell/ui/album-art-overlay';
 import { WebVisualizerUiModule } from '@angular-spotify/web/visualizer/ui';
+import { LyricsPipModule } from '@angular-spotify/web/lyrics/ui/lyrics-pip';
 import { DataSizeObserverDirective } from '@angular-spotify/web/shared/directives/data-size-observer';
 
 @NgModule({
@@ -24,6 +25,7 @@ import { DataSizeObserverDirective } from '@angular-spotify/web/shared/directive
     UnauthorizedModalModule,
     AlbumArtOverlayModule,
     WebVisualizerUiModule,
+    LyricsPipModule,
     DataSizeObserverDirective
   ],
   declarations: [LayoutComponent],
