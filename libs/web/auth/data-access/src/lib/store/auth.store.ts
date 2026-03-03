@@ -132,7 +132,12 @@ export class AuthStore extends ComponentStore<AuthState> {
         this.updateStateWithTokens(tokenResponse, newExpiresAt);
         this.dispatchAuthReady();
       }),
-      switchMap(() => this.loadUserProfile(false))
+      switchMap(() => this.loadUserProfile(false)),
+      catchError(() => {
+        this.clearStoredTokens();
+        this.redirectToAuthorizeIfNeeded();
+        return EMPTY;
+      })
     );
   }
 
@@ -186,6 +191,13 @@ export class AuthStore extends ComponentStore<AuthState> {
 
   private isTokenExpired(expiresAt: number | null): boolean {
     return !expiresAt || Date.now() >= expiresAt;
+  }
+
+  private clearStoredTokens(): void {
+    LocalStorageService.removeItem(LOCALSTORAGE_KEYS.ACCESS_TOKEN);
+    LocalStorageService.removeItem(LOCALSTORAGE_KEYS.TOKEN_TYPE);
+    LocalStorageService.removeItem(LOCALSTORAGE_KEYS.REFRESH_TOKEN);
+    LocalStorageService.removeItem(LOCALSTORAGE_KEYS.EXPIRES_AT);
   }
 
   private redirectToAuthorizeIfNeeded(): void {

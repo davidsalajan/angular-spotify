@@ -9,14 +9,14 @@ import {
 import { Observable } from 'rxjs';
 import { AuthStore } from '@angular-spotify/web/auth/data-access';
 import { switchMap, take } from 'rxjs/operators';
+import { shouldSkipInterceptor } from './skip-urls';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   constructor(private authStore: AuthStore) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Skip auth interceptor for non-Spotify endpoints
-    if (req.url.includes('accounts.spotify.com/api/token') || req.url.includes('lrclib.net')) {
+    if (shouldSkipInterceptor(req.url)) {
       return next.handle(req);
     }
 

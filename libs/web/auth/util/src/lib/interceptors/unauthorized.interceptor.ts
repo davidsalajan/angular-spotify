@@ -10,6 +10,7 @@ import {
 import { Provider } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { shouldSkipInterceptor } from './skip-urls';
 
 export class UnauthorizedInterceptor implements HttpInterceptor {
   constructor(private uiStore: UIStore) {}
@@ -18,8 +19,7 @@ export class UnauthorizedInterceptor implements HttpInterceptor {
     req: HttpRequest<Record<string, string>>,
     next: HttpHandler
   ): Observable<HttpEvent<Record<string, string>>> {
-    // Skip non-Spotify requests so their errors propagate normally
-    if (req.url.includes('lrclib.net')) {
+    if (shouldSkipInterceptor(req.url)) {
       return next.handle(req);
     }
 
