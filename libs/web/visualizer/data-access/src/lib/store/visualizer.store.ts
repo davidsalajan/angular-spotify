@@ -4,23 +4,32 @@ import { Location } from '@angular/common';
 import { ComponentStore } from '@ngrx/component-store';
 import { filter, map, tap, withLatestFrom } from 'rxjs/operators';
 import { RouterUtil } from '@angular-spotify/web/shared/utils';
+import { VisualizerType } from '../const';
 
 interface VisualizerState {
   isFirstTime: boolean;
   isShownAsPiP: boolean;
   isVisible: boolean;
+  selectedVisualizerType: VisualizerType;
 }
 
 @Injectable({ providedIn: 'root' })
 export class VisualizerStore extends ComponentStore<VisualizerState> {
   constructor(private router: Router, private location: Location) {
-    super({ isVisible: false, isShownAsPiP: false, isFirstTime: true });
+    super({ isVisible: false, isShownAsPiP: false, isFirstTime: true, selectedVisualizerType: VisualizerType.Particles });
     this.showVisualizerAsPiP$();
   }
 
   readonly isShownAsPiP$ = this.select((s) => s.isShownAsPiP);
   readonly isVisible$ = this.select((s) => s.isVisible);
   readonly showPiPVisualizer$ = this.select((s) => s.isVisible && s.isShownAsPiP);
+
+  readonly visualizerType$ = this.select((s) => s.selectedVisualizerType);
+
+  readonly setVisualizerType = this.updater((state, type: VisualizerType) => ({
+    ...state,
+    selectedVisualizerType: type
+  }));
 
   readonly showVisualizerAsPiP$ = this.effect(() =>
     this.router.events.pipe(
@@ -29,7 +38,7 @@ export class VisualizerStore extends ComponentStore<VisualizerState> {
       withLatestFrom(this.state$),
       tap(([isAtVisualizerRoute, state]) => {
         if (isAtVisualizerRoute) {
-          this.setState({ isFirstTime: false, isVisible: true, isShownAsPiP: false });
+          this.patchState({ isFirstTime: false, isVisible: true, isShownAsPiP: false });
         }
         if (!isAtVisualizerRoute && !state.isFirstTime) {
           this.setState({ ...state, isShownAsPiP: true });

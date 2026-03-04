@@ -82,7 +82,9 @@ export class PlaybackStore extends ComponentStore<PlaybackState> {
   readonly segments$ = this.select((s) => ({
     isPlaying: s.data ? !s.data.paused : false,
     position: s.data?.position,
-    segments: s.analysis?.segments
+    segments: s.analysis?.segments,
+    beats: s.analysis?.beats,
+    tempo: s.analysis?.track?.tempo ?? 120
   })).pipe(filter((s) => !!s.segments));
 
   readonly player = () => this.get().player;
@@ -119,6 +121,14 @@ export class PlaybackStore extends ComponentStore<PlaybackState> {
           start: segment.start * 1000,
           duration: segment.duration * 1000
         }));
+
+        if (analysis.beats) {
+          analysis.beats = analysis.beats.map((beat) => ({
+            ...beat,
+            start: beat.start * 1000,
+            duration: beat.duration * 1000
+          }));
+        }
 
         this.patchState({
           analysis: analysis,
