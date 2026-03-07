@@ -36,7 +36,7 @@ export class CategoriesEffect {
     this.actions$.pipe(
       ofType(loadMoreCategories),
       withLatestFrom(this.store.pipe(select(getCategoriesState))),
-      filter(([, state]) => selectHasMore(state) && state.status !== 'loading'),
+      filter(([, state]) => selectHasMore(state)),
       withLatestFrom(this.authStore.country$),
       switchMap(([[ , state], country]) =>
         this.browseApi

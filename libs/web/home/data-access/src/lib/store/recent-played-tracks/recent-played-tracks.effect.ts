@@ -33,7 +33,7 @@ export class RecentPlayedTracksEffect {
     this.actions$.pipe(
       ofType(loadMoreRecentTracks),
       withLatestFrom(this.store.pipe(select(getRecentPlayedTracksState))),
-      filter(([, state]) => state.next !== null && state.status !== 'loading'),
+      filter(([, state]) => state.next !== null),
       switchMap(([, state]) =>
         this.playerApi
           .getRecentPlayedTracks({ limit: SPOTIFY_DEFAULT_LIMIT, after: state.afterCursor! })

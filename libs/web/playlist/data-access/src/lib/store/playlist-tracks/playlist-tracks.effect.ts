@@ -50,7 +50,7 @@ export class PlaylistTracksEffect {
       withLatestFrom(this.store.pipe(select(getPlaylistTracksState))),
       filter(([{ playlistId }, state]) => {
         const entry = state.data?.get(playlistId);
-        return !!entry && entry.next !== null && state.status !== 'loading';
+        return !!entry && entry.next !== null;
       }),
       switchMap(([{ playlistId }, state]) => {
         const entry = state.data!.get(playlistId)!;

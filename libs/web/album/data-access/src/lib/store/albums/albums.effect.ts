@@ -28,7 +28,7 @@ export class AlbumsEffect {
     this.actions$.pipe(
       ofType(loadMoreAlbums),
       withLatestFrom(this.store.pipe(select(getAlbumsState))),
-      filter(([, state]) => selectHasMore(state) && state.status !== 'loading'),
+      filter(([, state]) => selectHasMore(state)),
       switchMap(([, state]) =>
         this.albumApi
           .getUserSavedAlbums({

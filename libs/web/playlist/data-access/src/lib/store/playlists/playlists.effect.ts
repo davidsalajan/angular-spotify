@@ -28,7 +28,7 @@ export class PlaylistsEffect {
     this.actions$.pipe(
       ofType(loadMorePlaylists),
       withLatestFrom(this.store.pipe(select(getPlaylistsState))),
-      filter(([, state]) => selectHasMore(state) && state.status !== 'loading'),
+      filter(([, state]) => selectHasMore(state)),
       switchMap(([, state]) =>
         this.playlistsApi
           .getUserSavedPlaylists({

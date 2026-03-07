@@ -47,7 +47,7 @@ export class FeaturePlaylistsEffect {
     this.actions$.pipe(
       ofType(loadMoreFeaturedPlaylists),
       withLatestFrom(this.store.pipe(select(getFeaturePlaylistsState))),
-      filter(([, state]) => selectHasMore(state) && state.status !== 'loading'),
+      filter(([, state]) => selectHasMore(state)),
       withLatestFrom(this.authStore.country$),
       switchMap(([[, state], country]) =>
         this.browseApi

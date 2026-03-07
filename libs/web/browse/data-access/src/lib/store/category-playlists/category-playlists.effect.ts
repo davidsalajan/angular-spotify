@@ -53,7 +53,7 @@ export class CategoryPlaylistsEffect {
       ),
       filter(([{ categoryId }, categoryMap, state]) => {
         const entry = categoryMap?.get(categoryId);
-        return !!entry && entry.next !== null && state.status !== 'loading';
+        return !!entry && entry.next !== null;
       }),
       switchMap(([{ categoryId }, categoryMap]) => {
         const entry = categoryMap!.get(categoryId)!;
