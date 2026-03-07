@@ -6,6 +6,7 @@ import { Directive, ElementRef, OnDestroy, OnInit, input, output } from '@angula
 })
 export class InfiniteScrollDirective implements OnInit, OnDestroy {
   enabled = input(true);
+  rootMargin = input('30px');
   scrolledToBottom = output<void>();
 
   private observer: IntersectionObserver | null = null;
@@ -20,7 +21,7 @@ export class InfiniteScrollDirective implements OnInit, OnDestroy {
           this.scrolledToBottom.emit();
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: `0px 0px ${this.rootMargin()} 0px`, threshold: 0 }
     );
     this.observer.observe(this.el.nativeElement);
   }
