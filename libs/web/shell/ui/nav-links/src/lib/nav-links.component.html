@@ -6,8 +6,13 @@
         <as-nav-link [playlist]="playlist" />
       </li>
     }
+    <div
+      asInfiniteScroll
+      [enabled]="(hasMore$ | async) === true && (isPlaylistsLoading$ | async) === false"
+      (scrolledToBottom)="loadMore()">
+    </div>
+    @if (isPlaylistsLoading$ | async) {
+      <as-spinner [size]="'lg'"> </as-spinner>
+    }
   </ul>
-}
-@if (isPlaylistsLoading$ | async) {
-  <as-spinner [size]="'lg'"> </as-spinner>
 }

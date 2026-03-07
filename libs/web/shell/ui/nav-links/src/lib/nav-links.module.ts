@@ -1,5 +1,6 @@
 import { MediaCoverModule } from '@angular-spotify/web/shared/ui/media-cover';
 import { PlayButtonModule } from '@angular-spotify/web/shared/ui/play-button';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
@@ -15,7 +16,8 @@ import { NavLinkComponent } from './nav-link/nav-link.component';
     LetDirective,
     PushPipe,
     SpinnerModule,
-    MediaCoverModule
+    MediaCoverModule,
+    InfiniteScrollDirective
   ],
   declarations: [NavLinksComponent, NavLinkComponent],
   exports: [NavLinksComponent]
