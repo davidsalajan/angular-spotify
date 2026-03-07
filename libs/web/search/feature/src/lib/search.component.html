@@ -9,18 +9,16 @@
       placeholder="Artists, songs, albums, or playlists"
       [autoFocus]="true"
       [rounded]="true"
-      [enableClearButton]="true"
-      >
+      [enableClearButton]="true">
     </as-input>
     @if (isLoading$ | async) {
       <as-spinner class="ml-4"></as-spinner>
     }
   </div>
 
-  <!-- Results lists -->
-  @if (data$ | async; as data) {
-    <!-- Tracks -->
-    @if (data?.tracks?.items?.length) {
+  <!-- Tracks -->
+  @if (tracks$ | async; as tracks) {
+    @if (tracks.length) {
       <div>
         <h2 class="mt-8 mb-4 text-heading">Songs</h2>
         <as-media-table-header>
@@ -31,23 +29,24 @@
           </div>
         </as-media-table-header>
         <div class="mb-8">
-          @for (item of data?.tracks?.items; track item; let idx = $index) {
+          @for (item of tracks; track item; let idx = $index) {
             <as-album-track
               [track]="item"
               [contextUri]="item.album.uri"
-              [index]="idx + 1"
-              >
+              [index]="idx + 1">
             </as-album-track>
           }
         </div>
       </div>
     }
-    <!-- Artists -->
-    @if (data?.artists?.items?.length) {
+  }
+  <!-- Artists -->
+  @if (artists$ | async; as artists) {
+    @if (artists.length) {
       <div>
         <h2 class="mt-8 mb-4 text-heading">Artists</h2>
         <div class="common-grid">
-          @for (item of data?.artists?.items; track item) {
+          @for (item of artists; track item) {
             <as-card
               [title]="item.name"
               [uri]="item.uri"
@@ -55,50 +54,58 @@
               [routerUrl]="'/artist/' + item.id"
               [description]="item.type | titlecase"
               [roundedImage]="true"
-              (togglePlay)="togglePlay($event, item.uri)"
-              >
-            </as-card>
-          }
-        </div>
-      </div>
-    }
-    <!-- Albums -->
-    @if (data?.albums?.items?.length) {
-      <div>
-        <h2 class="mt-8 mb-4 text-heading">Albums</h2>
-        <div class="common-grid">
-          @for (item of data?.albums?.items; track item) {
-            <as-card
-              [title]="item.name"
-              [uri]="item.uri"
-              [description]="item.artists[0].name"
-              [imageUrl]="item.images[0]?.url"
-              [routerUrl]="'/albums/' + item.id"
-              (togglePlay)="togglePlay($event, item.uri)"
-              >
-            </as-card>
-          }
-        </div>
-      </div>
-    }
-    <!-- Playlists -->
-    @if (data?.playlists?.items?.length) {
-      <div>
-        <h2 class="mt-8 mb-4 text-heading">Playlists</h2>
-        <div class="common-grid">
-          @for (item of data?.playlists?.items; track item) {
-            <as-card
-              [title]="item.name"
-              [uri]="item.uri"
-              [description]="item.description"
-              [imageUrl]="item.images[0]?.url"
-              [routerUrl]="'/playlist/' + item.id"
-              (togglePlay)="togglePlay($event, item.uri)"
-              >
+              (togglePlay)="togglePlay($event, item.uri)">
             </as-card>
           }
         </div>
       </div>
     }
   }
+  <!-- Albums -->
+  @if (albums$ | async; as albums) {
+    @if (albums.length) {
+      <div>
+        <h2 class="mt-8 mb-4 text-heading">Albums</h2>
+        <div class="common-grid">
+          @for (item of albums; track item) {
+            <as-card
+              [title]="item.name"
+              [uri]="item.uri"
+              [description]="item.artists[0].name"
+              [imageUrl]="item.images[0]?.url"
+              [routerUrl]="'/albums/' + item.id"
+              (togglePlay)="togglePlay($event, item.uri)">
+            </as-card>
+          }
+        </div>
+      </div>
+    }
+  }
+  <!-- Playlists -->
+  @if (playlists$ | async; as playlists) {
+    @if (playlists.length) {
+      <div>
+        <h2 class="mt-8 mb-4 text-heading">Playlists</h2>
+        <div class="common-grid">
+          @for (item of playlists; track item) {
+            <as-card
+              [title]="item.name"
+              [uri]="item.uri"
+              [description]="item.description"
+              [imageUrl]="item.images[0]?.url"
+              [routerUrl]="'/playlist/' + item.id"
+              (togglePlay)="togglePlay($event, item.uri)">
+            </as-card>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Infinite scroll sentinel -->
+  <div
+    asInfiniteScroll
+    [enabled]="(hasMore$ | async) === true && (isLoading$ | async) === false"
+    (scrolledToBottom)="loadMore()">
+  </div>
 </div>

@@ -18,8 +18,13 @@ import { PlayerApiService } from '@angular-spotify/web/shared/data-access/spotif
 })
 export class SearchComponent implements OnInit {
   searchControl: FormControl = new FormControl('');
-  data$ = this.store.data$;
+  tracks$ = this.store.tracks$;
+  artists$ = this.store.artists$;
+  albums$ = this.store.albums$;
+  playlists$ = this.store.playlists$;
   isLoading$ = this.store.isLoading$;
+  hasMore$ = this.store.hasMore$;
+  hasResults$ = this.store.hasResults$;
 
   constructor(
     private router: Router,
@@ -48,6 +53,10 @@ export class SearchComponent implements OnInit {
     if (queryParam) {
       this.searchControl.patchValue(queryParam);
     }
+  }
+
+  loadMore() {
+    this.store.loadMore();
   }
 
   togglePlay(isPlaying: boolean, contextUri: string) {
