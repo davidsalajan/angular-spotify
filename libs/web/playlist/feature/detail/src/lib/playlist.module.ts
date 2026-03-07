@@ -10,6 +10,7 @@ import { PlaylistComponent } from './playlist.component';
 import { RouterUtil } from '@angular-spotify/web/shared/utils';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { TracksLoadingComponent } from '@angular-spotify/web/shared/ui/tracks-loading';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 @NgModule({
   imports: [
     CommonModule,
@@ -20,6 +21,7 @@ import { TracksLoadingComponent } from '@angular-spotify/web/shared/ui/tracks-lo
     SvgIconComponent,
     LetDirective, PushPipe,
     TracksLoadingComponent,
+    InfiniteScrollDirective,
     RouterModule.forChild([
       {
         path: `:${RouterUtil.Configuration.PlaylistId}`,

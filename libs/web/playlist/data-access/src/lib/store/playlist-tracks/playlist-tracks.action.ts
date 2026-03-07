@@ -20,3 +20,8 @@ export const setPlaylistTracksStateStatus = createAction(
   '[Playlist Tracks/Set Playlist Tracks Status]',
   props<{ status: GenericStoreStatus }>()
 );
+
+export const loadMorePlaylistTracks = createAction(
+  '[Playlist Tracks/Load More]',
+  props<{ playlistId: string }>()
+);
