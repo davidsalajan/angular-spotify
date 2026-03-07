@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { CategoriesComponent } from './categories.component';
 import { CategoryCoverModule } from '@angular-spotify/web/browse/ui/category-cover';
 import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 
 @NgModule({
   imports: [
@@ -15,7 +16,8 @@ import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
       }
     ]),
     CategoryCoverModule,
-    SpinnerModule
+    SpinnerModule,
+    InfiniteScrollDirective
   ],
   declarations: [CategoriesComponent],
   exports: [CategoriesComponent]
