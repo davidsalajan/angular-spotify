@@ -8,6 +8,7 @@ import { MediaSummaryModule } from '@angular-spotify/web/shared/ui/media-summary
 import { MediaTableModule } from '@angular-spotify/web/shared/ui/media-table';
 import { SvgIconComponent } from '@ngneat/svg-icon';
 import { PlaylistTrackModule } from '@angular-spotify/web/playlist/ui/playlist-track';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 @NgModule({
   imports: [
     CommonModule,
@@ -23,6 +24,7 @@ import { PlaylistTrackModule } from '@angular-spotify/web/playlist/ui/playlist-t
     MediaTableModule,
     SvgIconComponent,
     PlaylistTrackModule,
+    InfiniteScrollDirective,
   ],
   declarations: [TracksComponent],
   exports: [TracksComponent]
