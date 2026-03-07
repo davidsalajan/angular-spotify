@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { select, Store } from '@ngrx/store';
-import { getAlbums, getAlbumsLoading, loadAlbums } from '@angular-spotify/web/album/data-access';
+import { getAlbums, getAlbumsHasMore, getAlbumsLoading, loadAlbums, loadMoreAlbums } from '@angular-spotify/web/album/data-access';
 import { PlayerApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { RouterUtil } from '@angular-spotify/web/shared/utils';
 import {
@@ -17,12 +17,17 @@ import {
 export class AlbumsComponent implements OnInit {
   albums$ = this.store.pipe(select(getAlbums));
   isLoading$ = this.store.pipe(select(getAlbumsLoading));
+  hasMore$ = this.store.pipe(select(getAlbumsHasMore));
   transitionService = inject(CurrentViewTransitionService);
 
   constructor(private store: Store, private playerApi: PlayerApiService) {}
 
   ngOnInit(): void {
     this.store.dispatch(loadAlbums());
+  }
+
+  loadMore() {
+    this.store.dispatch(loadMoreAlbums());
   }
 
   togglePlay(isPlaying: boolean, contextUri: string) {

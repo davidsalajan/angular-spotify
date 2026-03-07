@@ -10,3 +10,5 @@ export const loadAlbumsSuccess = createAction(
 );
 
 export const loadAlbumsError = createAction('[Albums Page/API error]', props<{ error: string }>());
+
+export const loadMoreAlbums = createAction('[Albums Page/Load More]');

@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { AlbumsComponent } from './albums.component';
 import { RouterModule } from '@angular/router';
 import { CardComponent } from '@angular-spotify/web/shared/ui/media';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
 @NgModule({
   imports: [
     CommonModule,
     CardComponent,
+    InfiniteScrollDirective,
     SpinnerModule,
     RouterModule.forChild([
       {

@@ -1,7 +1,7 @@
 <div class="content-spacing">
   @if (albums$ | async; as albums) {
     <div class="common-grid">
-      @for (item of albums.items; track item) {
+      @for (item of albums; track item) {
         <as-card
           [ngClass]="viewTransitionName(item)"
           [title]="item.album.name"
@@ -9,13 +9,17 @@
           [description]="item.album.artists[0].name"
           [imageUrl]="item.album.images[0]?.url"
           [routerUrl]="item.album.id"
-          (togglePlay)="togglePlay($event, item.album.uri)"
-          >
+          (togglePlay)="togglePlay($event, item.album.uri)">
         </as-card>
       }
     </div>
   }
+  <div
+    asInfiniteScroll
+    [enabled]="!!(hasMore$ | async) && (isLoading$ | async) === false"
+    (scrolledToBottom)="loadMore()">
+  </div>
   @if (isLoading$ | async) {
-    <as-spinner> </as-spinner>
+    <as-spinner></as-spinner>
   }
 </div>
