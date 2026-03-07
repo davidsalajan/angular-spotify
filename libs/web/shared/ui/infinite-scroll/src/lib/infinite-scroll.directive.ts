@@ -1,10 +1,13 @@
-import { Directive, ElementRef, OnDestroy, OnInit, input, output } from '@angular/core';
+import { Directive, ElementRef, HostBinding, OnDestroy, OnInit, input, output } from '@angular/core';
 
 @Directive({
   selector: '[asInfiniteScroll]',
   standalone: true,
 })
 export class InfiniteScrollDirective implements OnInit, OnDestroy {
+  @HostBinding('style.display') display = 'block';
+  @HostBinding('style.min-height.px') minHeight = 1;
+
   enabled = input(true);
   rootMargin = input('30px');
   scrolledToBottom = output<void>();
