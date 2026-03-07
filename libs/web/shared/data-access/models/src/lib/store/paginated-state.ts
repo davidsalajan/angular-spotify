@@ -27,9 +27,14 @@ export function onLoadPageSuccess<T>(
   state: PaginatedState<T>,
   pagingObject: { items: T[]; next: string | null; total: number; offset: number; limit: number }
 ): PaginatedState<T> {
+  const existing = state.data || [];
+  const existingIds = new Set(existing.map((item: any) => item.id).filter(Boolean));
+  const newItems = existingIds.size > 0
+    ? pagingObject.items.filter((item: any) => !existingIds.has(item.id))
+    : pagingObject.items;
   return {
     ...state,
-    data: [...(state.data || []), ...pagingObject.items],
+    data: [...existing, ...newItems],
     next: pagingObject.next,
     total: pagingObject.total,
     offset: pagingObject.offset,
