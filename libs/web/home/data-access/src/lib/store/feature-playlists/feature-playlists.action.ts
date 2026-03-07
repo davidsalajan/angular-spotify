@@ -1,6 +1,7 @@
 import { createAction, props } from '@ngrx/store';
 
 export const loadFeaturedPlaylists = createAction('[Home/Load Featured Playlists]');
+export const loadMoreFeaturedPlaylists = createAction('[Home/Load More Featured Playlists]');
 export const loadFeaturedPlaylistsSuccess = createAction(
   '[Home/Load Featured Playlists Success]',
   props<{

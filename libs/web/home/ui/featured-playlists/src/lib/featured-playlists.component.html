@@ -1,7 +1,9 @@
-@if (featuredPlaylists$ | async; as data) {
-  <h2 class="mt-8 mb-4 text-heading">{{ data.message }}</h2>
+@if (featuredPlaylists$ | async; as playlists) {
+  @if (message$ | async; as message) {
+    <h2 class="mt-8 mb-4 text-heading">{{ message }}</h2>
+  }
   <div class="common-grid">
-    @for (playlist of data.playlists.items; track playlist) {
+    @for (playlist of playlists; track playlist) {
       <as-card
         [title]="playlist.name"
         [description]="playlist.description"
@@ -12,4 +14,12 @@
       </as-card>
     }
   </div>
+}
+<div
+  asInfiniteScroll
+  [enabled]="(hasMore$ | async) === true && (isLoading$ | async) === false"
+  (scrolledToBottom)="loadMore()">
+</div>
+@if (isLoading$ | async) {
+  <as-spinner></as-spinner>
 }
