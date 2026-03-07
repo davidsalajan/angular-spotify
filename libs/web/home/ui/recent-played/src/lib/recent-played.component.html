@@ -15,6 +15,11 @@
     }
   </div>
 }
+<div
+  asInfiniteScroll
+  [enabled]="(hasMore$ | async) === true && (isLoading$ | async) === false"
+  (scrolledToBottom)="loadMore()">
+</div>
 @if (isLoading$ | async) {
   <as-spinner>
   </as-spinner>

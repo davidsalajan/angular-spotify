@@ -14,11 +14,14 @@ export const getRecentPlayedTracksLoading = createSelector(
   SelectorUtil.isLoading
 );
 
+export const getRecentPlayedTracksHasMore = createSelector(
+  getRecentPlayedTracksState,
+  (state) => state.next !== null
+);
+
 export const getRecentPlayedTracks = createSelector(getRecentPlayedTracksState, ({ data }) => {
   if (!data) {
     return null;
   }
-  return data.items
-    .filter(({ track }, idx, arr) => arr.findIndex((item) => item.track.id === track.id) === idx)
-    .slice(0, 20);
+  return data.filter(({ track }, idx, arr) => arr.findIndex((item) => item.track.id === track.id) === idx);
 });

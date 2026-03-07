@@ -1,6 +1,5 @@
 import { GenericStoreStatus } from '@angular-spotify/web/shared/data-access/models';
-import { SearchApiService, SearchResponse, SPOTIFY_DEFAULT_LIMIT } from '@angular-spotify/web/shared/data-access/spotify-api';
-import { SelectorUtil } from '@angular-spotify/web/shared/utils';
+import { SearchApiService, SPOTIFY_DEFAULT_LIMIT } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { Injectable } from '@angular/core';
 import { ComponentStore, tapResponse } from '@ngrx/component-store';
 import { filter, switchMap, tap } from 'rxjs/operators';

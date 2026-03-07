@@ -2,6 +2,7 @@ import { SpotifyApiRecentPlayerTracksResponse } from '@angular-spotify/web/share
 import { createAction, props } from '@ngrx/store';
 
 export const loadRecentTracks = createAction('[Home/Load Recent Played Tracks]');
+export const loadMoreRecentTracks = createAction('[Home/Load More Recent Played Tracks]');
 export const loadRecentTracksSuccess = createAction(
   '[Home/Load Recent Played Tracks Success]',
   props<{

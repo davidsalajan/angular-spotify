@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RecentPlayedComponent } from './recent-played.component';
 import { CardComponent } from '@angular-spotify/web/shared/ui/media';
 import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 @NgModule({
-  imports: [CommonModule, CardComponent, SpinnerModule],
+  imports: [CommonModule, CardComponent, SpinnerModule, InfiniteScrollDirective],
   declarations: [RecentPlayedComponent],
   exports: [RecentPlayedComponent]
 })
