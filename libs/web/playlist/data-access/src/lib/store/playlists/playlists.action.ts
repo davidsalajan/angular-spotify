@@ -9,6 +9,8 @@ export const loadPlaylistsSuccess = createAction(
   }>()
 );
 
+export const loadMorePlaylists = createAction('[Playlists Store/Load More]');
+
 export const loadPlaylistsError = createAction(
   '[Playlists Store/API error]',
   props<{ error: string }>()

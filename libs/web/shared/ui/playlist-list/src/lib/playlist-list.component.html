@@ -1,7 +1,6 @@
 @if (playlists) {
-  <div class="common-grid"
-    >
-    @for (playlist of playlists.items; track playlist) {
+  <div class="common-grid">
+    @for (playlist of playlists; track playlist) {
       <as-card
         [ngClass]="viewTransitionName(playlist)"
         [title]="playlist.name"
@@ -14,7 +13,11 @@
     }
   </div>
 }
+<div
+  asInfiniteScroll
+  [enabled]="hasMore && !isLoading"
+  (scrolledToBottom)="loadMore.emit()">
+</div>
 @if (isLoading) {
-  <as-spinner>
-  </as-spinner>
+  <as-spinner></as-spinner>
 }

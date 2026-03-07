@@ -1,4 +1,4 @@
-import { getPlaylists, getPlaylistsLoading } from '@angular-spotify/web/playlist/data-access';
+import { getPlaylistItems, getPlaylistsLoading } from '@angular-spotify/web/playlist/data-access';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { select, Store } from '@ngrx/store';
 @Component({
@@ -8,7 +8,7 @@ import { select, Store } from '@ngrx/store';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NavLinksComponent {
-  playlists$ = this.store.pipe(select(getPlaylists));
+  playlists$ = this.store.pipe(select(getPlaylistItems));
   isPlaylistsLoading$ = this.store.pipe(select(getPlaylistsLoading));
 
   constructor(private store: Store) {}

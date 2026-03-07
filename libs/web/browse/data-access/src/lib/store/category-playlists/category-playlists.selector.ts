@@ -15,5 +15,5 @@ export const getCategoryPlaylistsMap = createSelector(getCategoryPlaylistsState,
 export const getCategoryPlaylistsById = (categoryId: string) =>
   createSelector(getCategoryPlaylistsMap, (map) => {
     const playlists = map?.get(categoryId);
-    return SelectorUtil.getPlaylistsWithRoute(playlists);
+    return SelectorUtil.getPlaylistsWithRoute(playlists?.items);
   });
