@@ -8,7 +8,7 @@ import { ComponentStore, tapResponse } from '@ngrx/component-store';
 import { select, Store } from '@ngrx/store';
 import { combineLatest, Observable } from 'rxjs';
 import { filter, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
-import { getPlaylistTracksById, getPlaylistTracksLoading, loadPlaylistTracks } from '../playlist-tracks';
+import { getPlaylistTracksById, getPlaylistTracksHasMore, getPlaylistTracksLoading, loadPlaylistTracks, loadMorePlaylistTracks } from '../playlist-tracks';
 import { getPlaylist, getPlaylistsState, loadPlaylistSuccess } from '../playlists';
 
 interface PlaylistState extends GenericState<SpotifyApi.PlaylistObjectFull> {
@@ -52,6 +52,10 @@ export class PlaylistStore extends ComponentStore<PlaylistState> {
       );
     }),
     switchMap((playlistId) => this.store.pipe(select(getPlaylistTracksById(playlistId))))
+  );
+
+  tracksHasMore$ = this.playlistParams$.pipe(
+    switchMap((playlistId) => this.store.pipe(select(getPlaylistTracksHasMore(playlistId))))
   );
 
   isPlaylistPlaying$ = SelectorUtil.getMediaPlayingState(
@@ -120,6 +124,10 @@ export class PlaylistStore extends ComponentStore<PlaylistState> {
       )
     )
   );
+
+  loadMoreTracks(playlistId: string) {
+    this.store.dispatch(loadMorePlaylistTracks({ playlistId }));
+  }
 
   readonly playlistId$ = this.select((s) => s.playlistId);
 

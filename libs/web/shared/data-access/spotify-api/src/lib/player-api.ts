@@ -5,6 +5,7 @@ import {
   SpotifyApiRecentPlayerTracksResponse,
   SpotifyPlayRequestApi
 } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 @Injectable({ providedIn: 'root' })
 export class PlayerApiService {
   playerUrl: string;
@@ -58,7 +59,7 @@ export class PlayerApiService {
     });
   }
 
-  getRecentPlayedTracks(params: SpotifyApi.RecentlyPlayedParameterObject = { limit: 50 }) {
+  getRecentPlayedTracks(params: SpotifyApi.RecentlyPlayedParameterObject = { limit: SPOTIFY_DEFAULT_LIMIT }) {
     return this.http.get<SpotifyApiRecentPlayerTracksResponse>(
       `${this.playerUrl}/recently-played`,
       {

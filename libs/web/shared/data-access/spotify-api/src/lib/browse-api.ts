@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { AppConfig, APP_CONFIG } from '@angular-spotify/web/shared/app-config';
 import { map } from 'rxjs/operators';
 import { SpotifyApiParams } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 @Injectable({ providedIn: 'root' })
 export class BrowseApiService {
   browseUrl: string;
@@ -12,7 +13,7 @@ export class BrowseApiService {
 
   getAllFeaturedPlaylists(
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http.get<SpotifyApi.ListOfFeaturedPlaylistsResponse>(
@@ -25,7 +26,7 @@ export class BrowseApiService {
 
   getAllCategories(
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http
@@ -38,7 +39,7 @@ export class BrowseApiService {
   getCategoryPlaylists(
     categoryId: string,
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http

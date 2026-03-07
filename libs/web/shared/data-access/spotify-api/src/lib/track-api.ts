@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AppConfig, APP_CONFIG } from '@angular-spotify/web/shared/app-config';
 import { SpotifyApiAudioAnalysisResponse, SpotifyApiParams } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 
 @Injectable({ providedIn: 'root' })
 export class TrackApiService {
@@ -21,7 +22,7 @@ export class TrackApiService {
 
   getUserSavedTracks(
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http.get<SpotifyApi.UsersSavedTracksResponse>(

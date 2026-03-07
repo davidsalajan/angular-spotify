@@ -13,5 +13,12 @@ export const getPlaylistTracksLoading = createSelector(
 
 export const getPlaylistTracksById = (playlistId: string) =>
   createSelector(getPlaylistTracksState, ({ data }) => {
-    return data?.get(playlistId);
+    const entry = data?.get(playlistId);
+    return entry ? entry.items : null;
+  });
+
+export const getPlaylistTracksHasMore = (playlistId: string) =>
+  createSelector(getPlaylistTracksState, ({ data }) => {
+    const entry = data?.get(playlistId);
+    return entry ? entry.next !== null : false;
   });

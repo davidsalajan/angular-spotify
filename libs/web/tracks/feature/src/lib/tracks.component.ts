@@ -19,4 +19,8 @@ export class TracksComponent implements OnInit {
   playTrack(track: SpotifyApi.TrackObjectFull) {
     this.store.playTrack({ track });
   }
+
+  loadMore() {
+    this.store.loadMore();
+  }
 }

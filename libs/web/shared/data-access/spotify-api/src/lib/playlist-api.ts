@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AppConfig, APP_CONFIG } from '@angular-spotify/web/shared/app-config';
 import { SpotifyApiParams } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 
 @Injectable({ providedIn: 'root' })
 export class PlaylistApiService {
@@ -9,7 +10,7 @@ export class PlaylistApiService {
 
   getUserSavedPlaylists(
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http.get<SpotifyApi.ListOfCurrentUsersPlaylistsResponse>(
@@ -29,12 +30,13 @@ export class PlaylistApiService {
     );
   }
 
-  getTracks(playlistId: string) {
+  getTracks(playlistId: string, params: SpotifyApiParams = { limit: SPOTIFY_DEFAULT_LIMIT }) {
     if (!playlistId) {
       throw new Error('Playlist Id is required');
     }
     return this.http.get<SpotifyApi.PlaylistTrackResponse>(
-      `${this.appConfig.baseURL}/playlists/${playlistId}/tracks`
+      `${this.appConfig.baseURL}/playlists/${playlistId}/tracks`,
+      { params }
     );
   }
 }

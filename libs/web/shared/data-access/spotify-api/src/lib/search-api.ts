@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { AppConfig, APP_CONFIG } from '@angular-spotify/web/shared/app-config';
 import { SpotifyApiParams } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 
 export type SearchResponse = Pick<
   SpotifyApi.SearchResponse,
@@ -18,10 +19,10 @@ export class SearchApiService {
    * Search for tracks, artists, albums, and playlists
    *
    * @param {string} term
-   * @param {SpotifyApiParams} [apiParams={ limit: 50 }]
+   * @param {SpotifyApiParams} [apiParams={ limit: SPOTIFY_DEFAULT_LIMIT }]
    * @return {*}  {(Observable<SearchResponse>)}
    */
-  search(term: string, apiParams: SpotifyApiParams = { limit: 50 }): Observable<SearchResponse> {
+  search(term: string, apiParams: SpotifyApiParams = { limit: SPOTIFY_DEFAULT_LIMIT }): Observable<SearchResponse> {
     const params = new HttpParams({ fromObject: apiParams })
       .set('q', term)
       .set('type', 'track,artist,album,playlist');

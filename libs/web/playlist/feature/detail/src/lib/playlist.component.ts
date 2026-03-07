@@ -1,6 +1,7 @@
 import { PlaylistStore } from '@angular-spotify/web/playlist/data-access';
 import { RouteUtil } from '@angular-spotify/web/shared/utils';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { take } from 'rxjs/operators';
 
 @Component({
   selector: 'as-playlist',
@@ -22,6 +23,7 @@ export class PlaylistComponent {
   isCurrentPlaylistLoading$ = this.store.isCurrentPlaylistLoading$;
   tracks$ = this.store.tracks$;
   isPlaylistTracksLoading$ = this.store.isPlaylistTracksLoading$;
+  tracksHasMore$ = this.store.tracksHasMore$;
 
   constructor(private store: PlaylistStore) {}
 
@@ -34,6 +36,14 @@ export class PlaylistComponent {
   playTrack(position: number) {
     this.store.playTrack({
       position
+    });
+  }
+
+  loadMoreTracks() {
+    this.store.playlistId$.pipe(take(1)).subscribe((playlistId: string) => {
+      if (playlistId) {
+        this.store.loadMoreTracks(playlistId);
+      }
     });
   }
 

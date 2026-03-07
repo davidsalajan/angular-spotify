@@ -1,8 +1,4 @@
 /// <reference types="spotify-web-playback-sdk" />
-import {
-  GenericState,
-  PlaylistsResponseWithRoute
-} from '@angular-spotify/web/shared/data-access/models';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { RouteUtil } from './route-util';
@@ -46,25 +42,22 @@ export class SelectorUtil {
     );
   }
 
-  static isLoading({ status }: GenericState<unknown>) {
+  static isLoading({ status }: { status: string }) {
     return status === 'loading';
   }
 
-  static isDone({ status }: GenericState<unknown>) {
+  static isDone({ status }: { status: string }) {
     return status === 'success' || status === 'error';
   }
 
   static getPlaylistsWithRoute(
-    playlists: SpotifyApi.ListOfUsersPlaylistsResponse | null | undefined
-  ): PlaylistsResponseWithRoute | null | undefined {
+    playlists: SpotifyApi.PlaylistObjectSimplified[] | null | undefined
+  ) {
     if (playlists) {
-      return {
-        ...playlists,
-        items: playlists.items.map((item) => ({
-          ...item,
-          routeUrl: RouteUtil.getPlaylistRouteUrl(item.id)
-        }))
-      };
+      return playlists.map((item) => ({
+        ...item,
+        routeUrl: RouteUtil.getPlaylistRouteUrl(item.id),
+      }));
     }
     return playlists;
   }

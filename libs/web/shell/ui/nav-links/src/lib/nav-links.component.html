@@ -1,13 +1,18 @@
 <div class="mx-6 bg-highlight border-none h-[1px] min-h-[1px]"></div>
 @if (playlists$ | async; as playlists) {
   <ul class="pt-2 pb-1 px-0 overflow-auto">
-    @for (playlist of playlists.items; track playlist) {
+    @for (playlist of playlists; track playlist) {
       <li>
         <as-nav-link [playlist]="playlist" />
       </li>
     }
+    <div
+      asInfiniteScroll
+      [enabled]="(hasMore$ | async) === true && (isPlaylistsLoading$ | async) === false"
+      (scrolledToBottom)="loadMore()">
+    </div>
+    @if (isPlaylistsLoading$ | async) {
+      <as-spinner [size]="'lg'"> </as-spinner>
+    }
   </ul>
-}
-@if (isPlaylistsLoading$ | async) {
-  <as-spinner [size]="'lg'"> </as-spinner>
 }

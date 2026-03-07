@@ -1,5 +1,8 @@
 <div class="content-spacing">
-  <as-playlist-list [isLoading]="isPlaylistsLoading$ | async"
-                    [playlists]="$any(playlists$ | async)">
+  <as-playlist-list
+    [isLoading]="isPlaylistsLoading$ | async"
+    [playlists]="$any(playlists$ | async)"
+    [hasMore]="!!(hasMore$ | async)"
+    (loadMore)="loadMore()">
   </as-playlist-list>
 </div>

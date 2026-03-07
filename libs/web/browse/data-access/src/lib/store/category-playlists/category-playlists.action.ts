@@ -24,4 +24,9 @@ export const setCategoryPlaylistsState = createAction(
   }>()
 );
 
+export const loadMoreCategoryPlaylists = createAction(
+  '[Browse Page]/Load More Category Playlist',
+  props<{ categoryId: string }>()
+);
+
 // TODO: Skip load error action, to integrate with toApiResponse operator

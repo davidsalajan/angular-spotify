@@ -3,14 +3,21 @@ import { createReducer, on } from '@ngrx/store';
 import {
   loadCategoryPlaylists,
   loadCategoryPlaylistsSuccess,
+  loadMoreCategoryPlaylists,
   setCategoryPlaylistsState
 } from './category-playlists.action';
 
 export const categoryPlaylistsFeatureKey = 'categoryPlaylists';
 
-export type CategoryPlaylistsState = GenericState<
-  Map<string, SpotifyApi.PagingObject<SpotifyApi.PlaylistObjectSimplified>>
->;
+export interface CategoryPlaylistsEntry {
+  items: SpotifyApi.PlaylistObjectSimplified[];
+  next: string | null;
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type CategoryPlaylistsState = GenericState<Map<string, CategoryPlaylistsEntry>>;
 
 const initialState: CategoryPlaylistsState = {
   status: 'pending',
@@ -24,12 +31,23 @@ export const categoryPlaylistsReducer = createReducer(
     ...state,
     status: 'loading' as const
   })),
+  on(loadMoreCategoryPlaylists, (state) => ({
+    ...state,
+    status: 'loading' as const
+  })),
   on(loadCategoryPlaylistsSuccess, (state, { categoryId, playlists }) => {
-    const { data: map } = state;
-    map?.set(categoryId, playlists);
+    const map = new Map(state.data!);
+    const existing = map.get(categoryId);
+    map.set(categoryId, {
+      items: [...(existing?.items || []), ...playlists.items],
+      next: playlists.next,
+      total: playlists.total,
+      offset: playlists.offset,
+      limit: playlists.limit,
+    });
     return {
       ...state,
-      data: new Map(map!),
+      data: map,
       status: 'success' as const
     };
   }),

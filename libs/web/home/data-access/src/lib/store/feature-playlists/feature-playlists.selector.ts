@@ -1,4 +1,5 @@
-import { RouteUtil } from '@angular-spotify/web/shared/utils';
+import { selectHasMore } from '@angular-spotify/web/shared/data-access/models';
+import { RouteUtil, SelectorUtil } from '@angular-spotify/web/shared/utils';
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { featuredPlaylistsFeatureKey, FeaturePlaylistsState } from './feature-playlists.reducer';
 
@@ -6,26 +7,33 @@ export const getFeaturePlaylistsState = createFeatureSelector<FeaturePlaylistsSt
   featuredPlaylistsFeatureKey
 );
 
-export const getFeaturedPlaylists = createSelector(getFeaturePlaylistsState, ({ data }) => {
-  return data;
-});
+export const getFeaturedPlaylistItems = createSelector(
+  getFeaturePlaylistsState,
+  (state) => state.data
+);
+
+export const getFeaturedPlaylistsMessage = createSelector(
+  getFeaturePlaylistsState,
+  (state) => state.message
+);
+
+export const getFeaturedPlaylistsHasMore = createSelector(
+  getFeaturePlaylistsState,
+  selectHasMore
+);
+
+export const getFeaturedPlaylistsLoading = createSelector(
+  getFeaturePlaylistsState,
+  SelectorUtil.isLoading
+);
 
 export const getFeaturedPlaylistsWithRouteUrl = createSelector(
-  getFeaturedPlaylists,
-  (featuredPlaylists) => {
-    if (featuredPlaylists) {
-      return {
-        ...featuredPlaylists,
-        playlists: {
-          ...featuredPlaylists.playlists,
-          items: featuredPlaylists.playlists.items.map((item) => ({
-            ...item,
-            routeUrl: RouteUtil.getPlaylistRouteUrl(item.id)
-          }))
-        }
-      };
-    }
-
-    return featuredPlaylists;
+  getFeaturedPlaylistItems,
+  (items) => {
+    if (!items) return null;
+    return items.map((item) => ({
+      ...item,
+      routeUrl: RouteUtil.getPlaylistRouteUrl(item.id),
+    }));
   }
 );

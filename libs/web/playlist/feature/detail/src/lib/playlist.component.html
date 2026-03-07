@@ -36,7 +36,7 @@
 
   @if (tracks$ | async; as tracks) {
     <div class="mb-8">
-      @for (item of tracks.items; track item; let idx = $index) {
+      @for (item of tracks; track item; let idx = $index) {
         @if (item.track) {
           <as-playlist-track
             [item]="item"
@@ -49,6 +49,12 @@
       }
     </div>
   }
+
+  <div
+    asInfiniteScroll
+    [enabled]="(tracksHasMore$ | async) === true && (isPlaylistTracksLoading$ | async) === false"
+    (scrolledToBottom)="loadMoreTracks()">
+  </div>
 </div>
 
 @if (isCurrentPlaylistLoading$ | async) {

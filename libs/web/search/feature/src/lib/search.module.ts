@@ -7,6 +7,7 @@ import { SpinnerModule } from '@angular-spotify/web/shared/ui/spinner';
 import { CardComponent } from '@angular-spotify/web/shared/ui/media';
 import { MediaTableModule } from '@angular-spotify/web/shared/ui/media-table';
 import { AlbumTrackModule } from '@angular-spotify/web/album/ui/album-track';
+import { InfiniteScrollDirective } from '@angular-spotify/web/shared/ui/infinite-scroll';
 import { SearchComponent } from './search.component';
 import { SvgIconComponent } from '@ngneat/svg-icon';
 
@@ -19,6 +20,7 @@ import { SvgIconComponent } from '@ngneat/svg-icon';
     MediaTableModule,
     SvgIconComponent,
     AlbumTrackModule,
+    InfiniteScrollDirective,
     RouterModule.forChild([
       {
         path: '',

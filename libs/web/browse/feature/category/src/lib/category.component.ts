@@ -1,8 +1,10 @@
 import {
   getCategoryById,
   getCategoryPlaylistsById,
+  getCategoryPlaylistsHasMore,
   getCategoryPlaylistsLoading,
-  loadCategoryPlaylists
+  loadCategoryPlaylists,
+  loadMoreCategoryPlaylists
 } from '@angular-spotify/web/browse/data-access';
 import { RouterUtil } from '@angular-spotify/web/shared/utils';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
@@ -18,9 +20,14 @@ import { filter, map, switchMap, tap } from 'rxjs/operators';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryComponent {
+  private currentCategoryId: string | null = null;
+
   categoryParams$: Observable<string> = this.route.params.pipe(
     map((params) => params[RouterUtil.Configuration.CategoryId]),
-    filter((categoryId) => !!categoryId)
+    filter((categoryId) => !!categoryId),
+    tap((categoryId) => {
+      this.currentCategoryId = categoryId;
+    })
   );
 
   category$ = this.categoryParams$.pipe(
@@ -37,5 +44,15 @@ export class CategoryComponent {
     switchMap((categoryId) => this.store.pipe(select(getCategoryPlaylistsById(categoryId))))
   );
 
+  hasMore$ = this.categoryParams$.pipe(
+    switchMap((categoryId) => this.store.pipe(select(getCategoryPlaylistsHasMore(categoryId))))
+  );
+
   constructor(private route: ActivatedRoute, private store: Store) {}
+
+  loadMore() {
+    if (this.currentCategoryId) {
+      this.store.dispatch(loadMoreCategoryPlaylists({ categoryId: this.currentCategoryId }));
+    }
+  }
 }

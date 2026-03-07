@@ -4,7 +4,7 @@
       type="Playlist"
       [imageUrl]="'/assets/images/totoro.jpg'"
       [title]="'Liked Songs'"
-      [trackCount]="vm.data?.total"
+      [trackCount]="vm.total"
       >
     </as-media-summary>
     <as-media-table-header>
@@ -17,7 +17,7 @@
       </div>
     </as-media-table-header>
     <div class="mb-8">
-      @for (item of vm.data?.items; track item; let idx = $index) {
+      @for (item of vm.data; track item; let idx = $index) {
         @if (item.track) {
           <as-playlist-track
             type="LIKE_SONGS"
@@ -29,6 +29,11 @@
           </as-playlist-track>
         }
       }
+    </div>
+    <div
+      asInfiniteScroll
+      [enabled]="vm.hasMore && !vm.isLoading"
+      (scrolledToBottom)="loadMore()">
     </div>
     @if (vm.isLoading) {
       <div class="px-8 mb-5 album-loading">

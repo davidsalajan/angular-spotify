@@ -5,8 +5,11 @@
     </h2>
   }
   <ng-container *ngrxLet="playlists$ as playlists">
-    <as-playlist-list [isLoading]="!playlists"
-      [playlists]="$any(playlists)">
+    <as-playlist-list
+      [isLoading]="!playlists"
+      [playlists]="$any(playlists)"
+      [hasMore]="!!(hasMore$ | async)"
+      (loadMore)="loadMore()">
     </as-playlist-list>
   </ng-container>
 </div>

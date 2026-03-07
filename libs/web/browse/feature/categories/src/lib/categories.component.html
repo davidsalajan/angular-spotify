@@ -1,14 +1,18 @@
 <div class="mb-6 content-spacing">
   @if (categories$ | async; as categories) {
-    <div class="common-grid"
-      >
-      @for (category of categories.items; track category) {
+    <div class="common-grid">
+      @for (category of categories; track category) {
         <as-category-cover
           [category]="category">
         </as-category-cover>
       }
     </div>
   }
+  <div
+    asInfiniteScroll
+    [enabled]="(hasMore$ | async) === true && (isLoading$ | async) === false"
+    (scrolledToBottom)="loadMore()">
+  </div>
   @if (isLoading$ | async) {
     <as-spinner></as-spinner>
   }

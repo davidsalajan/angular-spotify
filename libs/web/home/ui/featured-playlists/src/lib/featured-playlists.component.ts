@@ -1,4 +1,10 @@
-import { getFeaturedPlaylistsWithRouteUrl } from '@angular-spotify/web/home/data-access';
+import {
+  getFeaturedPlaylistsHasMore,
+  getFeaturedPlaylistsLoading,
+  getFeaturedPlaylistsMessage,
+  getFeaturedPlaylistsWithRouteUrl,
+  loadMoreFeaturedPlaylists,
+} from '@angular-spotify/web/home/data-access';
 import { PlayerApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { select, Store } from '@ngrx/store';
@@ -11,6 +17,9 @@ import { select, Store } from '@ngrx/store';
 })
 export class FeaturedPlaylistsComponent {
   featuredPlaylists$ = this.store.pipe(select(getFeaturedPlaylistsWithRouteUrl));
+  message$ = this.store.pipe(select(getFeaturedPlaylistsMessage));
+  hasMore$ = this.store.pipe(select(getFeaturedPlaylistsHasMore));
+  isLoading$ = this.store.pipe(select(getFeaturedPlaylistsLoading));
 
   constructor(private store: Store, private playerApi: PlayerApiService) {}
 
@@ -20,5 +29,9 @@ export class FeaturedPlaylistsComponent {
         context_uri: playlistUri
       })
       .subscribe();
+  }
+
+  loadMore() {
+    this.store.dispatch(loadMoreFeaturedPlaylists());
   }
 }

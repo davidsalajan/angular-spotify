@@ -1,5 +1,6 @@
 import { AppConfig, APP_CONFIG } from '@angular-spotify/web/shared/app-config';
 import { SpotifyApiParams } from '@angular-spotify/web/shared/data-access/models';
+import { SPOTIFY_DEFAULT_LIMIT } from './spotify-api.constant';
 import { HttpClient } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 
@@ -9,7 +10,7 @@ export class AlbumApiService {
 
   getUserSavedAlbums(
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http.get<SpotifyApi.UsersSavedAlbumsResponse>(
@@ -27,7 +28,7 @@ export class AlbumApiService {
   getTracks(
     albumId: string,
     params: SpotifyApiParams = {
-      limit: 50
+      limit: SPOTIFY_DEFAULT_LIMIT
     }
   ) {
     return this.http.get<SpotifyApi.AlbumTracksResponse>(

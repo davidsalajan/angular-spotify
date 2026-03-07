@@ -1,8 +1,8 @@
 import { CurrentViewTransitionService, getViewTransitionParamValue } from '@angular-spotify/shared/view-transition';
-import { PlaylistsResponseWithRoute } from '@angular-spotify/web/shared/data-access/models';
+import { PlaylistWithRouteUrl } from '@angular-spotify/web/shared/data-access/models';
 import { PlayerApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { RouterUtil } from '@angular-spotify/web/shared/utils';
-import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 
 @Component({
   selector: 'as-playlist-list',
@@ -11,8 +11,10 @@ import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PlaylistListComponent {
-  @Input() playlists!: PlaylistsResponseWithRoute | null;
+  @Input() playlists!: PlaylistWithRouteUrl[] | null;
   @Input() isLoading!: boolean | null;
+  @Input() hasMore = false;
+  @Output() loadMore = new EventEmitter<void>();
   transitionService = inject(CurrentViewTransitionService);
 
   constructor(private playerApi: PlayerApiService) {}
