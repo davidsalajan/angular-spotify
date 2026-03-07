@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { loadCategories, loadCategoriesSuccess, setCategoriesState } from './categories.action';
 import { switchMap, map, withLatestFrom, filter, tap } from 'rxjs/operators';
-import { BrowseApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
+import { BrowseApiService, SPOTIFY_DEFAULT_LIMIT } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { AuthStore } from '@angular-spotify/web/auth/data-access';
 import { getCategories } from './categories.selector';
 import { select, Store } from '@ngrx/store';
@@ -24,7 +24,7 @@ export class CategoriesEffect {
         this.browseApi
           .getAllCategories({
             country,
-            limit: 50
+            limit: SPOTIFY_DEFAULT_LIMIT
           })
           .pipe(
             map((response) =>

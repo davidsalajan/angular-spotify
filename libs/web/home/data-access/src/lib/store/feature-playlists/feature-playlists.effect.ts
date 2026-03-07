@@ -1,5 +1,5 @@
 import { AuthStore } from '@angular-spotify/web/auth/data-access';
-import { BrowseApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
+import { BrowseApiService, SPOTIFY_DEFAULT_LIMIT } from '@angular-spotify/web/shared/data-access/spotify-api';
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { EMPTY } from 'rxjs';
@@ -21,7 +21,7 @@ export class FeaturePlaylistsEffect {
       switchMap(([_, country]) =>
         this.browseApi
           .getAllFeaturedPlaylists({
-            limit: 50,
+            limit: SPOTIFY_DEFAULT_LIMIT,
             country: country || 'VN'
           })
           .pipe(
