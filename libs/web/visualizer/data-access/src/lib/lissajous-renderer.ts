@@ -8,6 +8,9 @@ const TRAIL_LENGTH = 400;
 const BASE_SCALE_RATIO = 0.3;
 const GLOW_BLUR = 12;
 const SMOOTHING = 0.1;
+const BASE_PHASE_SPEED = 0.02; // always clearly moving
+const ENERGY_PHASE_BOOST = 0.008;
+const FREQ_MORPH_RATE = 0.04; // more responsive shape changes
 
 export class LissajousRenderer implements VisualizerRenderer {
   private phase = 0;
@@ -40,8 +43,8 @@ export class LissajousRenderer implements VisualizerRenderer {
     // Morph frequency ratios based on dominant pitches
     const p0 = this.smoothedPitches[0] + this.smoothedPitches[4] + this.smoothedPitches[7];
     const p1 = this.smoothedPitches[2] + this.smoothedPitches[5] + this.smoothedPitches[9];
-    this.freqA += ((2 + p0 * 3) - this.freqA) * 0.02;
-    this.freqB += ((3 + p1 * 2) - this.freqB) * 0.02;
+    this.freqA += ((2 + p0 * 3) - this.freqA) * FREQ_MORPH_RATE;
+    this.freqB += ((3 + p1 * 2) - this.freqB) * FREQ_MORPH_RATE;
   }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
@@ -51,8 +54,8 @@ export class LissajousRenderer implements VisualizerRenderer {
     const cy = height / 2;
     const scale = Math.min(width, height) * BASE_SCALE_RATIO;
 
-    // Advance phase
-    this.phase += 0.008 + this.smoothedEnergy * 0.01;
+    // Advance phase — always clearly moving
+    this.phase += BASE_PHASE_SPEED + this.smoothedEnergy * ENERGY_PHASE_BOOST;
     this.hueOffset += 0.5;
 
     // Beat pulse scale

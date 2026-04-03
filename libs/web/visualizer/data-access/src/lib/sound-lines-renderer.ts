@@ -8,18 +8,23 @@ const POINTS_PER_LINE = 100;
 const MAX_AMPLITUDE = 40;
 const SMOOTHING = 0.12;
 const LINE_SPACING_RATIO = 0.6;
+const BASE_PHASE_SPEED = 0.05; // always visibly moving
+const ENERGY_PHASE_BOOST = 0.02; // energy adds speed, doesn't gate it
+const MIN_AMP_FACTOR = 0.15; // minimum amplitude floor
 
 export class SoundLinesRenderer implements VisualizerRenderer {
   private smoothedPitches: number[] = new Array(12).fill(0);
   private currentEnergy = 0;
   private currentBeatPhase = 0;
   private phase = 0;
+  private driftPhase = 0; // secondary slow drift for organic feel
 
   setup(width: number, height: number): void {
     this.smoothedPitches = new Array(12).fill(0);
     this.currentEnergy = 0;
     this.currentBeatPhase = 0;
     this.phase = 0;
+    this.driftPhase = 0;
   }
 
   updateAudio(audioData: AudioData): void {
@@ -35,7 +40,8 @@ export class SoundLinesRenderer implements VisualizerRenderer {
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     ctx.globalCompositeOperation = 'lighter';
 
-    this.phase += 0.02 + this.currentEnergy * 0.03;
+    this.phase += BASE_PHASE_SPEED + this.currentEnergy * ENERGY_PHASE_BOOST;
+    this.driftPhase += 0.013; // slow secondary drift for organic feel
 
     const totalHeight = height * LINE_SPACING_RATIO;
     const startY = (height - totalHeight) / 2;
@@ -54,7 +60,8 @@ export class SoundLinesRenderer implements VisualizerRenderer {
       const pitchInfluence = this.smoothedPitches[pitchIdx1] * (1 - pitchMix) +
                              this.smoothedPitches[pitchIdx2] * pitchMix;
 
-      const amp = MAX_AMPLITUDE * (pitchInfluence * 2 + this.currentEnergy) * (1 + beatBoost * 0.5);
+      // Minimum amplitude floor so waves always undulate visibly
+      const amp = MAX_AMPLITUDE * (MIN_AMP_FACTOR + pitchInfluence * 1.5 + this.currentEnergy * 0.5) * (1 + beatBoost * 0.5);
       const color = COLORS[line % COLORS.length];
 
       ctx.save();
@@ -76,7 +83,8 @@ export class SoundLinesRenderer implements VisualizerRenderer {
         const freq1 = 2 + pitchIdx1 * 0.5;
         const freq2 = 3 + pitchIdx2 * 0.3;
         const wave = Math.sin(xRatio * TWO_PI * freq1 + this.phase + line * 0.4) * 0.6 +
-                     Math.sin(xRatio * TWO_PI * freq2 + this.phase * 1.3 + line * 0.2) * 0.4;
+                     Math.sin(xRatio * TWO_PI * freq2 + this.phase * 1.3 + line * 0.2) * 0.3 +
+                     Math.sin(xRatio * TWO_PI * 1.5 + this.driftPhase + line * 0.7) * 0.1;
 
         const y = baseY + wave * amp * envelope;
 

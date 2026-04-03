@@ -9,18 +9,23 @@ const MAX_SPIKE_RATIO = 0.3;
 const GLOW_BLUR = 15;
 const SMOOTHING = 0.2;
 const LINE_WIDTH = 2;
+const ROTATION_SPEED = 0.005;
+const MIN_SPIKE_RATIO = 0.04; // minimum spike length ratio
+const WAVE_SPEED = 0.05; // speed of the rotating wave pattern
 
 export class RadialSpikesRenderer implements VisualizerRenderer {
   private smoothedValues: number[] = new Array(NUM_SPIKES).fill(0);
   private currentEnergy = 0;
   private currentBeatPhase = 0;
   private rotation = 0;
+  private time = 0;
 
   setup(width: number, height: number): void {
     this.smoothedValues = new Array(NUM_SPIKES).fill(0);
     this.currentEnergy = 0;
     this.currentBeatPhase = 0;
     this.rotation = 0;
+    this.time = 0;
   }
 
   updateAudio(audioData: AudioData): void {
@@ -48,16 +53,20 @@ export class RadialSpikesRenderer implements VisualizerRenderer {
     const innerRadius = minDim * INNER_RADIUS_RATIO;
     const maxSpike = minDim * MAX_SPIKE_RATIO;
 
-    // Slow rotation
-    this.rotation += 0.002;
+    // Continuous rotation
+    this.rotation += ROTATION_SPEED;
+    this.time += WAVE_SPEED;
 
     // Beat pulse
     const beatPulse = 1.0 + Math.max(0, 1.0 - this.currentBeatPhase * 3) * 0.15 * this.currentEnergy;
+    const minSpike = minDim * MIN_SPIKE_RATIO;
 
     for (let i = 0; i < NUM_SPIKES; i++) {
       const angle = (i / NUM_SPIKES) * TWO_PI + this.rotation;
       const value = this.smoothedValues[i] * this.currentEnergy * 2;
-      const spikeLength = innerRadius + value * maxSpike * beatPulse;
+      // Per-spike wave animation: rotating wave pattern for continuous motion
+      const waveMotion = minSpike * (0.5 + 0.5 * Math.sin(this.time + i * TWO_PI / NUM_SPIKES));
+      const spikeLength = innerRadius + waveMotion + value * maxSpike * beatPulse;
       const color = COLORS[i % COLORS.length];
 
       const x1 = cx + Math.cos(angle) * innerRadius;
@@ -71,7 +80,7 @@ export class RadialSpikesRenderer implements VisualizerRenderer {
       ctx.lineTo(x2, y2);
       ctx.strokeStyle = color;
       ctx.lineWidth = LINE_WIDTH + value * 2;
-      ctx.globalAlpha = 0.4 + this.currentEnergy * 0.6;
+      ctx.globalAlpha = 0.3 + this.currentEnergy * 0.7;
       ctx.shadowColor = color;
       ctx.shadowBlur = GLOW_BLUR * this.currentEnergy;
       ctx.lineCap = 'round';
