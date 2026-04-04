@@ -3,13 +3,15 @@ import { AudioData, VisualizerRenderer } from './visualizer-renderer.interface';
 
 const NUM_BARS = 12;
 const RISE_SPEED = 0.3; // how fast bars rise toward target
-const FALL_SPEED = 0.3; // how fast bars fall back down (slower = smoother)
+const FALL_SPEED = 0.15; // slower fall for smoother decay (asymmetric rise/fall)
 const GLOW_BLUR = 15;
 const BAR_GAP_RATIO = 0.3; // gap between bars as ratio of bar width
 const MAX_HEIGHT_RATIO = 0.85; // max bar height as ratio of canvas height
 const MIN_HEIGHT_RATIO = 0.02; // min bar height to always show something
 const REFLECTION_ALPHA = 0.15;
 const REFLECTION_HEIGHT_RATIO = 0.3;
+const IDLE_AMP = 0.03; // amplitude of idle breathing oscillation
+const IDLE_SPEED = 0.04; // speed of idle breathing
 
 export class WaveformBarsRenderer implements VisualizerRenderer {
   private currentHeights: number[] = new Array(NUM_BARS).fill(0);
@@ -17,12 +19,14 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
   private currentEnergy = 0;
   private currentBeatPhase = 0;
   private barColors: string[] = [];
+  private time = 0;
 
   setup(width: number, height: number): void {
     this.currentHeights = new Array(NUM_BARS).fill(0);
     this.targetHeights = new Array(NUM_BARS).fill(0);
     this.currentEnergy = 0;
     this.currentBeatPhase = 0;
+    this.time = 0;
     // Assign colors from the palette, cycling if needed
     this.barColors = Array.from({ length: NUM_BARS }, (_, i) => COLORS[i % COLORS.length]);
   }
@@ -39,6 +43,7 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     ctx.globalCompositeOperation = 'lighter';
+    this.time += IDLE_SPEED;
 
     const totalBarSpace = width * 0.8; // use 80% of width
     const startX = (width - totalBarSpace) / 2;
@@ -50,13 +55,16 @@ export class WaveformBarsRenderer implements VisualizerRenderer {
     const beatPulse = 1.0 + Math.max(0, 1.0 - this.currentBeatPhase * 4) * 0.08;
 
     for (let i = 0; i < NUM_BARS; i++) {
-      // Smooth lerp: rise fast, fall gently
+      // Smooth lerp: rise fast, fall gently (asymmetric)
       const diff = this.targetHeights[i] - this.currentHeights[i];
       const speed = diff > 0 ? RISE_SPEED : FALL_SPEED;
       this.currentHeights[i] += diff * speed;
 
+      // Idle breathing: gentle sine-wave oscillation per bar
+      const idleBreath = MIN_HEIGHT_RATIO + IDLE_AMP * (0.5 + 0.5 * Math.sin(this.time + i * 0.6));
+
       const barHeight = Math.max(
-        height * MIN_HEIGHT_RATIO,
+        height * idleBreath,
         this.currentHeights[i] * height * MAX_HEIGHT_RATIO * beatPulse
       );
 

@@ -9,6 +9,10 @@ const AMPLITUDE_RATIO = 0.15;
 const LINE_WIDTH = 2;
 const GLOW_BLUR = 20;
 const SMOOTHING = 0.15;
+const ROTATION_SPEED = 0.006;
+const BREATH_AMP = 0.03; // gentle pulsing amplitude
+const BREATH_SPEED = 0.03; // breathing speed
+const MIN_ENERGY_FLOOR = 0.2; // minimum energy multiplier so rings always wobble
 
 export class CircularRingRenderer implements VisualizerRenderer {
   private smoothedPitches: number[] = new Array(12).fill(0);
@@ -16,6 +20,7 @@ export class CircularRingRenderer implements VisualizerRenderer {
   private currentBeatPhase = 0;
   private rotation = 0;
   private colorIndex = 0;
+  private time = 0;
 
   setup(width: number, height: number): void {
     this.smoothedPitches = new Array(12).fill(0);
@@ -23,6 +28,7 @@ export class CircularRingRenderer implements VisualizerRenderer {
     this.currentBeatPhase = 0;
     this.rotation = 0;
     this.colorIndex = 0;
+    this.time = 0;
   }
 
   updateAudio(audioData: AudioData): void {
@@ -44,8 +50,9 @@ export class CircularRingRenderer implements VisualizerRenderer {
     const baseRadius = minDim * BASE_RADIUS_RATIO;
     const amplitude = minDim * AMPLITUDE_RATIO;
 
-    // Slow rotation
-    this.rotation += 0.003;
+    // Continuous rotation
+    this.rotation += ROTATION_SPEED;
+    this.time += BREATH_SPEED;
 
     // Beat pulse
     const beatPulse = 1.0 + Math.max(0, 1.0 - this.currentBeatPhase * 3) * 0.1 * this.currentEnergy;
@@ -54,7 +61,9 @@ export class CircularRingRenderer implements VisualizerRenderer {
     for (let ring = 0; ring < 3; ring++) {
       const ringOffset = ring * 0.15;
       const ringAlpha = (0.7 - ring * 0.2) * (0.3 + this.currentEnergy * 0.7);
-      const ringRadius = baseRadius * (1 + ring * 0.3) * beatPulse;
+      // Base breathing: gentle pulsing per ring at different rates
+      const breath = 1 + Math.sin(this.time + ring * 1.2) * BREATH_AMP;
+      const ringRadius = baseRadius * (1 + ring * 0.3) * beatPulse * breath;
       const color = COLORS[Math.floor(this.colorIndex + ring * 4) % COLORS.length];
 
       ctx.save();
@@ -74,7 +83,8 @@ export class CircularRingRenderer implements VisualizerRenderer {
         const frac = pitchPos - Math.floor(pitchPos);
         const pitchValue = this.smoothedPitches[pitchIdx] * (1 - frac) + this.smoothedPitches[nextIdx] * frac;
 
-        const distortion = pitchValue * amplitude * this.currentEnergy * 2;
+        // Minimum energy floor so rings always wobble slightly
+        const distortion = pitchValue * amplitude * (MIN_ENERGY_FLOOR + this.currentEnergy * 1.8);
         const r = ringRadius + distortion;
 
         const x = cx + Math.cos(angle) * r;
