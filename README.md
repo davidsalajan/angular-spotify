@@ -14,7 +14,9 @@ Check out the **live application** -> https://spotify.trungk18.com
 
 ![Angular Spotify Demo][demo]
 
-![Angular Spotify Visualizer][visualizer]
+![Angular Spotify Lyrics][lyrics]
+
+![Angular Spotify Visualization Selection][visualization-selector]
 
 ![Angular Spotify Browse][angular-spotify-browse]
 
@@ -352,3 +354,5 @@ Feel free to use my code on your project. Please put a reference to this reposit
 [pwa]: /libs/web/shared/assets/src/assets/readme/angular-spotify-pwa.gif
 [web-player]: /libs/web/shared/assets/src/assets/readme/angular-spotify-web-player.png
 [nx-cloud]: /libs/web/shared/assets/src/assets/readme/nx-cloud.png
+[lyrics]: /libs/web/shared/assets/src/assets/readme/angular-spotify-lyrics.gif
+[visualization-selector]: /libs/web/shared/assets/src/assets/readme/angular-spotify-visualization-selector.gif
