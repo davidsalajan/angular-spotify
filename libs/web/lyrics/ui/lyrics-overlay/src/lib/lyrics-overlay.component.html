@@ -1,0 +1,20 @@
+<div class="lyrics-overlay" *ngrxLet="wordProgress$ as progress">
+  <div
+    *ngrxLet="currentLine$ as line"
+    class="line-container"
+    [class.line-enter]="line"
+    [style.--start-x]="line?.entryOrigin?.startX"
+    [style.--start-y]="line?.entryOrigin?.startY"
+    [style.--ctrl-x]="line?.entryOrigin?.controlX1"
+    [style.--ctrl-y]="line?.entryOrigin?.controlY1"
+  >
+    <span
+      *ngFor="let word of line?.words"
+      class="word"
+      [ngClass]="getWordClass(word, progress)"
+    >{{ word.text }} </span>
+  </div>
+  <div class="next-line" *ngrxLet="nextLineText$ as nextText">
+    {{ nextText }}
+  </div>
+</div>

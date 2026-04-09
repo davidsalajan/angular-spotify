@@ -1,0 +1,77 @@
+:host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.lyrics-overlay {
+  text-align: center;
+  max-width: 80%;
+}
+
+.line-container {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  min-height: 3rem;
+
+  &.line-enter {
+    animation: curvedEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes curvedEntry {
+  0% {
+    opacity: 0;
+    transform: translate(var(--start-x, -120px), var(--start-y, 0));
+  }
+  40% {
+    opacity: 0.7;
+    transform: translate(
+      calc(var(--ctrl-x, 30%) - 50%),
+      calc(var(--ctrl-y, 40%) - 50%)
+    );
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+.word {
+  display: inline;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+.word-active {
+  color: #ffffff;
+  text-shadow:
+    0 0 20px rgba(168, 85, 247, 0.8),
+    0 0 40px rgba(168, 85, 247, 0.4);
+}
+
+.word-past {
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: none;
+}
+
+.word-upcoming {
+  color: rgba(255, 255, 255, 0.25);
+  text-shadow: none;
+}
+
+.next-line {
+  @apply mt-4 text-lg;
+  color: rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+  min-height: 1.5rem;
+}
