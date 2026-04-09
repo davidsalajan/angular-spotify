@@ -3,6 +3,12 @@
 # compiled output
 /dist
 /tmp
+
+# superpowers brainstorm artifacts
+.superpowers/
+
+# git worktrees
+.worktrees/
 /out-tsc
 
 # dependencies
