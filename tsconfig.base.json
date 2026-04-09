@@ -62,6 +62,9 @@
       "@angular-spotify/web/lyrics/ui/lyrics-toggle": [
         "libs/web/lyrics/ui/lyrics-toggle/src/index.ts"
       ],
+      "@angular-spotify/web/lyrics/ui/lyrics-overlay": [
+        "libs/web/lyrics/ui/lyrics-overlay/src/index.ts"
+      ],
       "@angular-spotify/web/lyrics/ui/lyrics-view": ["libs/web/lyrics/ui/lyrics-view/src/index.ts"],
       "@angular-spotify/web/playlist/data-access": ["libs/web/playlist/data-access/src/index.ts"],
       "@angular-spotify/web/playlist/feature/detail": [
