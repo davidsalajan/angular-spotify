@@ -15,6 +15,7 @@
     [class.above-visualizer]="showPiPVisualizer$ | async"
     [lyrics]="lyrics$ | async"
     [activeLine]="(activeLine$ | async) ?? -1"
+    [isSynced]="(isSynced$ | async) ?? false"
     (expand)="lyricsStore.setVisibility({ isVisible: true })"
     (closePip)="lyricsStore.setVisibility({ isVisible: false })"
   ></as-lyrics-pip>

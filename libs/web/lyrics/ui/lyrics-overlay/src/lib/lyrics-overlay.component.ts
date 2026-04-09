@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { LyricsStore, LyricLine } from '@angular-spotify/web/lyrics/data-access';
+import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { PlaybackStore } from '@angular-spotify/web/shared/data-access/store';
-import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
+import { UntilDestroy } from '@ngneat/until-destroy';
 import { combineLatest, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
