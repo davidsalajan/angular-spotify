@@ -1,27 +1,21 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { PlaybackStore } from '@angular-spotify/web/shared/data-access/store';
-import { UntilDestroy } from '@ngneat/until-destroy';
 import { combineLatest, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-
-interface WordTiming {
-  text: string;
-  startProgress: number;
-  endProgress: number;
-}
-
-interface AnimatedLine {
-  words: WordTiming[];
-  entryOrigin: CurveOrigin;
-  progress: number;
-}
 
 interface CurveOrigin {
   startX: string;
   startY: string;
   controlX1: string;
   controlY1: string;
+}
+
+interface OverlayLines {
+  previousText: string;
+  currentText: string;
+  nextText: string;
+  entryOrigin: CurveOrigin;
 }
 
 const CALM_ORIGINS: CurveOrigin[] = [
@@ -40,7 +34,6 @@ const INTENSE_ORIGINS: CurveOrigin[] = [
   { startX: '50%', startY: 'calc(100% + 80px)', controlX1: '55%', controlY1: '95%' }
 ];
 
-@UntilDestroy()
 @Component({
   selector: 'as-lyrics-overlay',
   templateUrl: './lyrics-overlay.component.html',
@@ -48,9 +41,7 @@ const INTENSE_ORIGINS: CurveOrigin[] = [
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LyricsOverlayComponent implements OnInit {
-  currentLine$!: Observable<AnimatedLine | null>;
-  nextLineText$!: Observable<string>;
-  wordProgress$!: Observable<number>;
+  lines$!: Observable<OverlayLines | null>;
 
   private lineCounter = 0;
 
@@ -60,7 +51,7 @@ export class LyricsOverlayComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.currentLine$ = combineLatest([
+    this.lines$ = combineLatest([
       this.lyricsStore.lyrics$,
       this.lyricsStore.activeLine$,
       this.playbackStore.segments$.pipe(map((s) => s.segments))
@@ -70,69 +61,22 @@ export class LyricsOverlayComponent implements OnInit {
         const line = lyrics[activeIdx];
         if (!line || line.time === null) return null;
 
-        const nextLine = lyrics[activeIdx + 1];
-        const lineDuration =
-          nextLine?.time !== null && nextLine?.time !== undefined
-            ? nextLine.time - line.time
-            : 4000;
-
-        const words = this.buildWordTimings(line.text, lineDuration);
         const energy = this.estimateEnergy(line.time, segments);
         const origin = this.pickOrigin(energy);
 
-        return { words, entryOrigin: origin, progress: 0 };
+        return {
+          previousText: activeIdx > 0 ? (lyrics[activeIdx - 1]?.text || '') : '',
+          currentText: line.text,
+          nextText: lyrics[activeIdx + 1]?.text || '',
+          entryOrigin: origin
+        };
       }),
       distinctUntilChanged((a, b) => {
         if (a === null && b === null) return true;
         if (a === null || b === null) return false;
-        return a.words.map((w) => w.text).join(' ') === b.words.map((w) => w.text).join(' ');
+        return a.currentText === b.currentText;
       })
     );
-
-    this.nextLineText$ = combineLatest([
-      this.lyricsStore.lyrics$,
-      this.lyricsStore.activeLine$
-    ]).pipe(
-      map(([lyrics, activeIdx]) => {
-        if (!lyrics || activeIdx < 0) return '';
-        return lyrics[activeIdx + 1]?.text || '';
-      }),
-      distinctUntilChanged()
-    );
-
-    this.wordProgress$ = combineLatest([
-      this.lyricsStore.lyrics$,
-      this.lyricsStore.activeLine$,
-      this.lyricsStore.interpolatedPosition$
-    ]).pipe(
-      map(([lyrics, activeIdx, position]) => {
-        if (!lyrics || activeIdx < 0) return 0;
-        const line = lyrics[activeIdx];
-        if (!line || line.time === null) return 0;
-
-        const nextLine = lyrics[activeIdx + 1];
-        const lineDuration =
-          nextLine?.time !== null && nextLine?.time !== undefined
-            ? nextLine.time - line.time
-            : 4000;
-
-        const elapsed = position - line.time;
-        return Math.min(1, Math.max(0, elapsed / lineDuration));
-      }),
-      distinctUntilChanged()
-    );
-  }
-
-  private buildWordTimings(text: string, lineDuration: number): WordTiming[] {
-    const words = text.split(/\s+/).filter((w) => w.length > 0);
-    if (words.length === 0) return [];
-
-    const sliceSize = 1 / words.length;
-    return words.map((word, i) => ({
-      text: word,
-      startProgress: i * sliceSize,
-      endProgress: (i + 1) * sliceSize
-    }));
   }
 
   private estimateEnergy(
@@ -150,11 +94,5 @@ export class LyricsOverlayComponent implements OnInit {
     this.lineCounter++;
     const origins = energy > 0.4 ? INTENSE_ORIGINS : CALM_ORIGINS;
     return origins[this.lineCounter % origins.length];
-  }
-
-  getWordClass(word: WordTiming, progress: number): string {
-    if (progress >= word.endProgress) return 'word-past';
-    if (progress >= word.startProgress) return 'word-active';
-    return 'word-upcoming';
   }
 }

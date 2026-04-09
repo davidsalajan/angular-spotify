@@ -15,17 +15,40 @@
 .lyrics-overlay {
   text-align: center;
   max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.line-container {
+.previous-line {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.2);
+  min-height: 1.75rem;
+  transition: opacity 0.4s ease;
+}
+
+.current-line {
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.4;
-  white-space: pre-wrap;
+  color: #ffffff;
   min-height: 3rem;
+  text-shadow:
+    0 0 20px rgba(168, 85, 247, 0.8),
+    0 0 40px rgba(168, 85, 247, 0.4);
 
+  // Curved entry animation
   &.line-enter {
     animation: curvedEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  // Gentle floating drift while active
+  &.line-float {
+    animation:
+      curvedEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+      gentleFloat 4s ease-in-out 0.6s infinite;
   }
 }
 
@@ -47,31 +70,24 @@
   }
 }
 
-.word {
-  display: inline;
-  transition: color 0.15s ease, text-shadow 0.15s ease;
-}
-
-.word-active {
-  color: #ffffff;
-  text-shadow:
-    0 0 20px rgba(168, 85, 247, 0.8),
-    0 0 40px rgba(168, 85, 247, 0.4);
-}
-
-.word-past {
-  color: rgba(255, 255, 255, 0.55);
-  text-shadow: none;
-}
-
-.word-upcoming {
-  color: rgba(255, 255, 255, 0.25);
-  text-shadow: none;
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(8px, -4px);
+  }
+  50% {
+    transform: translate(-5px, 3px);
+  }
+  75% {
+    transform: translate(4px, -2px);
+  }
 }
 
 .next-line {
-  @apply mt-4 text-lg;
-  color: rgba(255, 255, 255, 0.15);
+  font-size: 1.25rem;
   font-weight: 500;
-  min-height: 1.5rem;
+  color: rgba(255, 255, 255, 0.15);
+  min-height: 1.75rem;
 }
