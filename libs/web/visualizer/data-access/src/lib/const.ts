@@ -33,7 +33,8 @@ export enum VisualizerType {
   CircularRing = 'circular-ring',
   RadialSpikes = 'radial-spikes',
   SoundLines = 'sound-lines',
-  Lissajous = 'lissajous'
+  Lissajous = 'lissajous',
+  Bubbles = 'bubbles'
 }
 
 export const VISUALIZER_TYPE_LABELS: Record<VisualizerType, string> = {
@@ -42,5 +43,6 @@ export const VISUALIZER_TYPE_LABELS: Record<VisualizerType, string> = {
   [VisualizerType.CircularRing]: 'Circular Ring',
   [VisualizerType.RadialSpikes]: 'Radial Spikes',
   [VisualizerType.SoundLines]: 'Sound Lines',
-  [VisualizerType.Lissajous]: 'Lissajous'
+  [VisualizerType.Lissajous]: 'Lissajous',
+  [VisualizerType.Bubbles]: 'Bubbles'
 };
