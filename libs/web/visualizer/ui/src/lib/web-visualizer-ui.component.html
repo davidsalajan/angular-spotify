@@ -9,6 +9,15 @@
     </option>
   </select>
   <button
+    *ngIf="hasSyncedLyrics$ | async"
+    (click)="toggleLyricsOverlay()"
+    class="action-btn"
+    [class.active]="isLyricsOverlayOn$ | async"
+    title="Show lyrics on visualizer"
+  >
+    <svg-icon [key]="'mic'" [fontSize]="'16px'"></svg-icon>
+  </button>
+  <button
     *ngrxLet="isVisualizerShownAsPiP$ as isShownAsPiP"
     (click)="togglePiP()"
     class="action-btn"

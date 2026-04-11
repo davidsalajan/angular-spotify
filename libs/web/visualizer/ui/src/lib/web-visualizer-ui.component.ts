@@ -6,6 +6,7 @@ import {
   VisualizerType,
   VISUALIZER_TYPE_LABELS
 } from '@angular-spotify/web/visualizer/data-access';
+import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { DOCUMENT } from '@angular/common';
 import { mean } from 'lodash-es';
 import {
@@ -41,12 +42,16 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
   visualizerTypes = Object.values(VisualizerType);
   visualizerTypeLabels = VISUALIZER_TYPE_LABELS;
 
+  hasSyncedLyrics$ = this.lyricsStore.isSynced$;
+  isLyricsOverlayOn$ = this.visualizerStore.isLyricsOverlayOn$;
+
   @ViewChild('visualizer', { static: true }) visualizer!: ElementRef;
 
   constructor(
     private playbackStore: PlaybackStore,
     @Inject(DOCUMENT) private readonly document: Document,
-    private visualizerStore: VisualizerStore
+    private visualizerStore: VisualizerStore,
+    private lyricsStore: LyricsStore
   ) {}
 
   ngOnInit(): void {
@@ -133,6 +138,10 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
       (this.visualizer.nativeElement as HTMLElement).requestFullscreen();
     }
     this.isFullscreen = !this.isFullscreen;
+  }
+
+  toggleLyricsOverlay(): void {
+    this.visualizerStore.toggleLyricsOverlay();
   }
 
   togglePiP() {

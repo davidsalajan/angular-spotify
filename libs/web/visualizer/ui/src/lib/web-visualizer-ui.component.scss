@@ -51,5 +51,9 @@
     &:hover {
       @apply bg-opacity-40;
     }
+
+    &.active {
+      color: rgb(var(--text-primary, 29 185 84));
+    }
   }
 }
