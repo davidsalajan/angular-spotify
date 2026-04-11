@@ -9,7 +9,7 @@
     </option>
   </select>
   <button
-    *ngIf="hasSyncedLyrics$ | async"
+    *ngIf="showLyricsToggle$ | async"
     (click)="toggleLyricsOverlay()"
     class="action-btn"
     [class.active]="isLyricsOverlayOn$ | async"

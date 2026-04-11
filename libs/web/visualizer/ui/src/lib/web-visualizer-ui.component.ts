@@ -20,7 +20,7 @@ import {
 } from '@angular/core';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { SpotifyApiAudioAnalysisBeat } from '@angular-spotify/web/shared/data-access/models';
-import { timer } from 'rxjs';
+import { combineLatest, timer } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 import { AudioData } from '@angular-spotify/web/visualizer/data-access';
 
@@ -42,7 +42,10 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
   visualizerTypes = Object.values(VisualizerType);
   visualizerTypeLabels = VISUALIZER_TYPE_LABELS;
 
-  hasSyncedLyrics$ = this.lyricsStore.isSynced$;
+  showLyricsToggle$ = combineLatest([
+    this.lyricsStore.isSynced$,
+    this.visualizerStore.isShownAsPiP$
+  ]).pipe(map(([isSynced, isPiP]) => isSynced && !isPiP));
   isLyricsOverlayOn$ = this.visualizerStore.isLyricsOverlayOn$;
 
   @ViewChild('visualizer', { static: true }) visualizer!: ElementRef;
