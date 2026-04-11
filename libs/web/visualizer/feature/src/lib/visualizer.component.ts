@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
+import { VisualizerStore } from '@angular-spotify/web/visualizer/data-access';
 
 @Component({
   selector: 'as-visualizer',
@@ -8,7 +8,7 @@ import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VisualizerComponent {
-  showLyricsOverlay$ = this.lyricsStore.showLyricsOverlay$;
+  showLyricsOverlay$ = this.visualizerStore.showLyricsOverlay$;
 
-  constructor(private lyricsStore: LyricsStore) {}
+  constructor(private visualizerStore: VisualizerStore) {}
 }
