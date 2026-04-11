@@ -7,6 +7,18 @@
       <svg-icon [key]="'times'"></svg-icon>
     </button>
   </div>
-  <p class="current-line">{{ currentLine }}</p>
-  <p class="next-line">{{ nextLine }}</p>
+  <div class="lyrics-scroll-container">
+    <p
+      *ngFor="let line of lyrics; let i = index"
+      #lyricLine
+      class="lyric-line"
+      [class.active]="i === activeLine"
+      [class.past]="isSynced && activeLine >= 0 && i < activeLine"
+      [class.upcoming]="isSynced && (activeLine < 0 || i > activeLine)"
+      [class.synced]="isSynced && line.time !== null"
+      (click)="onLineClick(line)"
+    >
+      {{ line.text }}
+    </p>
+  </div>
 </div>

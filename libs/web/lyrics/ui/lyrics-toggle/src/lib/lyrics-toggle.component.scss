@@ -9,4 +9,13 @@
   &.active {
     color: rgb(var(--text-primary));
   }
+
+  &:disabled {
+    color: rgba(var(--text-baseline), 0.2);
+    cursor: not-allowed;
+
+    &:hover {
+      color: rgba(var(--text-baseline), 0.2);
+    }
+  }
 }

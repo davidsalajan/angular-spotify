@@ -6,6 +6,7 @@ import {
   VisualizerType,
   VISUALIZER_TYPE_LABELS
 } from '@angular-spotify/web/visualizer/data-access';
+import { LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { DOCUMENT } from '@angular/common';
 import { mean } from 'lodash-es';
 import {
@@ -19,7 +20,7 @@ import {
 } from '@angular/core';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { SpotifyApiAudioAnalysisBeat } from '@angular-spotify/web/shared/data-access/models';
-import { timer } from 'rxjs';
+import { combineLatest, timer } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 import { AudioData } from '@angular-spotify/web/visualizer/data-access';
 
@@ -41,12 +42,19 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
   visualizerTypes = Object.values(VisualizerType);
   visualizerTypeLabels = VISUALIZER_TYPE_LABELS;
 
+  showLyricsToggle$ = combineLatest([
+    this.lyricsStore.isSynced$,
+    this.visualizerStore.isShownAsPiP$
+  ]).pipe(map(([isSynced, isPiP]) => isSynced && !isPiP));
+  isLyricsOverlayOn$ = this.visualizerStore.isLyricsOverlayOn$;
+
   @ViewChild('visualizer', { static: true }) visualizer!: ElementRef;
 
   constructor(
     private playbackStore: PlaybackStore,
     @Inject(DOCUMENT) private readonly document: Document,
-    private visualizerStore: VisualizerStore
+    private visualizerStore: VisualizerStore,
+    private lyricsStore: LyricsStore
   ) {}
 
   ngOnInit(): void {
@@ -133,6 +141,10 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
       (this.visualizer.nativeElement as HTMLElement).requestFullscreen();
     }
     this.isFullscreen = !this.isFullscreen;
+  }
+
+  toggleLyricsOverlay(): void {
+    this.visualizerStore.toggleLyricsOverlay();
   }
 
   togglePiP() {

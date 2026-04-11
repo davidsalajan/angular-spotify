@@ -17,6 +17,7 @@ export class LayoutComponent implements OnInit {
   showPiPLyrics$ = this.lyricsStore.showPiPLyrics$;
   lyrics$ = this.lyricsStore.lyrics$;
   activeLine$ = this.lyricsStore.activeLine$;
+  isSynced$ = this.lyricsStore.isSynced$;
   currentAlbumCoverUrl$ = this.playbackStore.currentTrack$.pipe(
     map((track) => track?.album?.images[0]?.url),
     filter((imageUrl) => !!imageUrl)

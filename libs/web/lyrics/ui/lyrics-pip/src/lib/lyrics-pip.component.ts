@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  AfterViewChecked,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  Output,
+  QueryList,
+  ViewChildren
+} from '@angular/core';
 import { LyricLine } from '@angular-spotify/web/lyrics/data-access';
 
 @Component({
@@ -7,23 +17,36 @@ import { LyricLine } from '@angular-spotify/web/lyrics/data-access';
   styleUrls: ['./lyrics-pip.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LyricsPipComponent {
+export class LyricsPipComponent implements AfterViewChecked {
   @Input() lyrics: LyricLine[] | null = null;
   @Input() activeLine = -1;
+  @Input() isSynced = false;
   @Output() expand = new EventEmitter<void>();
   @Output() closePip = new EventEmitter<void>();
+  @Output() seekTo = new EventEmitter<number>();
 
-  get currentLine(): string {
-    if (!this.lyrics || this.activeLine < 0) {
-      return this.lyrics?.[0]?.text || '';
+  @ViewChildren('lyricLine') lyricLineElements!: QueryList<ElementRef>;
+
+  private lastScrolledLine = -1;
+
+  ngAfterViewChecked(): void {
+    if (this.activeLine >= 0 && this.activeLine !== this.lastScrolledLine) {
+      this.scrollToActiveLine();
+      this.lastScrolledLine = this.activeLine;
     }
-    return this.lyrics[this.activeLine]?.text || '';
   }
 
-  get nextLine(): string {
-    if (!this.lyrics || this.activeLine < 0) {
-      return this.lyrics?.[1]?.text || '';
+  onLineClick(line: LyricLine): void {
+    if (this.isSynced && line.time !== null) {
+      this.seekTo.emit(line.time);
     }
-    return this.lyrics[this.activeLine + 1]?.text || '';
+  }
+
+  private scrollToActiveLine(): void {
+    const elements = this.lyricLineElements?.toArray();
+    const activeEl = elements?.[this.activeLine]?.nativeElement as HTMLElement;
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 }

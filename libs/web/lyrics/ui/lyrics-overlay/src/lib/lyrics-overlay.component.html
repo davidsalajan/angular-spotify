@@ -1,0 +1,19 @@
+<div class="lyrics-overlay" *ngrxLet="lines$ as lines">
+  <div class="previous-line" *ngIf="lines?.previousText as prevText">
+    {{ prevText }}
+  </div>
+  <div
+    class="current-line"
+    [class.line-enter]="lines"
+    [class.line-float]="lines"
+    [style.--start-x]="lines?.entryOrigin?.startX"
+    [style.--start-y]="lines?.entryOrigin?.startY"
+    [style.--ctrl-x]="lines?.entryOrigin?.controlX1"
+    [style.--ctrl-y]="lines?.entryOrigin?.controlY1"
+  >
+    {{ lines?.currentText }}
+  </div>
+  <div class="next-line" *ngIf="lines?.nextText as nxtText">
+    {{ nxtText }}
+  </div>
+</div>

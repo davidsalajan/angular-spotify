@@ -55,7 +55,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
   // The Spotify SDK only reports position on state changes (seek, pause, play),
   // so we estimate current position using the SDK's timestamp to avoid
   // drift caused by async processing delays (e.g. await getVolume()).
-  private readonly interpolatedPosition$: Observable<number> = combineLatest([
+  readonly interpolatedPosition$: Observable<number> = combineLatest([
     this.playbackStore.positionWithTimestamp$,
     this.playbackStore.isPlaying$
   ]).pipe(

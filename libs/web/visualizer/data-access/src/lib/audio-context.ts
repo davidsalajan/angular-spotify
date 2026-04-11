@@ -7,6 +7,7 @@
 
 import * as Sketch from 'sketch-js';
 import { VisualizerType } from './const';
+import { BubblesRenderer } from './bubbles-renderer';
 import { CircularRingRenderer } from './circular-ring-renderer';
 import { LissajousRenderer } from './lissajous-renderer';
 import { ParticlesRenderer } from './particles-renderer';
@@ -27,6 +28,8 @@ export function createRenderer(type: VisualizerType): VisualizerRenderer {
       return new RadialSpikesRenderer();
     case VisualizerType.SoundLines:
       return new SoundLinesRenderer();
+    case VisualizerType.Bubbles:
+      return new BubblesRenderer();
     case VisualizerType.Particles:
     default:
       return new ParticlesRenderer();

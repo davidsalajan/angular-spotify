@@ -8,3 +8,4 @@ export * from './lib/circular-ring-renderer';
 export * from './lib/lissajous-renderer';
 export * from './lib/radial-spikes-renderer';
 export * from './lib/sound-lines-renderer';
+export * from './lib/bubbles-renderer';
