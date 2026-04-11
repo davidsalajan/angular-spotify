@@ -1,0 +1,367 @@
+<h2>Lyrics Animation Style on Visualizer</h2>
+<p class="subtitle">How should synced lyrics animate into view on top of the visualizer canvas?</p>
+
+<div class="cards">
+  <!-- Option A: Fall from top -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0d1117; height: 280px; overflow: hidden; position: relative; border-radius: 8px;">
+      <canvas id="demoA" width="400" height="280" style="width:100%;height:100%;"></canvas>
+    </div>
+    <div class="card-body">
+      <h3>A. Gravity Drop</h3>
+      <p>Lines fall from the top with gravity easing &mdash; they decelerate as they reach the center, then gently fade out downward when the next line arrives. Like snowflakes or falling leaves.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Curved fly-in -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0d1117; height: 280px; overflow: hidden; position: relative; border-radius: 8px;">
+      <canvas id="demoB" width="400" height="280" style="width:100%;height:100%;"></canvas>
+    </div>
+    <div class="card-body">
+      <h3>B. Curved Fly-In</h3>
+      <p>Lines fly in from alternating left/right sides along a B&eacute;zier curve path, settling at the center. Each new line pushes the previous one out with a mirrored curve. Feels dynamic and musical.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Typewriter reveal -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0d1117; height: 280px; overflow: hidden; position: relative; border-radius: 8px;">
+      <canvas id="demoC" width="400" height="280" style="width:100%;height:100%;"></canvas>
+    </div>
+    <div class="card-body">
+      <h3>C. Karaoke Wipe</h3>
+      <p>Text appears statically centered but a highlight "wipe" sweeps across each word in sync with the beat. Current word glows bright, past words dim, upcoming words are ghosted. Classic karaoke feel.</p>
+    </div>
+  </div>
+
+  <!-- Option D: Mix -->
+  <div class="card" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0d1117; height: 280px; overflow: hidden; position: relative; border-radius: 8px;">
+      <canvas id="demoD" width="400" height="280" style="width:100%;height:100%;"></canvas>
+    </div>
+    <div class="card-body">
+      <h3>D. Hybrid: Curved Entry + Karaoke Wipe</h3>
+      <p>Lines fly in with a curve (like B), but once settled, words highlight progressively (like C). Best of both worlds &mdash; dynamic entry with precise karaoke sync.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Shared helpers
+const lyrics = [
+  "I've been waiting for you",
+  "In the midnight hour",
+  "Dancing with the stars tonight",
+  "Feel the rhythm of the night"
+];
+
+function setupCanvas(id) {
+  const c = document.getElementById(id);
+  const ctx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  c.width = c.offsetWidth * dpr;
+  c.height = c.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  return { ctx, w: c.offsetWidth, h: c.offsetHeight };
+}
+
+// ---- DEMO A: Gravity Drop ----
+(function() {
+  const { ctx, w, h } = setupCanvas('demoA');
+  let lineIdx = 0, t = 0, prevY = -50, prevAlpha = 0, prevText = '';
+
+  function ease(x) { return 1 - Math.pow(1 - x, 3); }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle bg particles
+    for (let i = 0; i < 15; i++) {
+      const px = (Math.sin(Date.now() * 0.0003 + i * 2) * 0.5 + 0.5) * w;
+      const py = (Math.cos(Date.now() * 0.0004 + i * 3) * 0.5 + 0.5) * h;
+      ctx.fillStyle = 'rgba(99,102,241,0.15)';
+      ctx.beginPath();
+      ctx.arc(px, py, 2 + Math.sin(i) * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const progress = (t % 180) / 180;
+    const text = lyrics[lineIdx % lyrics.length];
+
+    ctx.font = 'bold 22px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+
+    // Exiting line (previous)
+    if (prevText && progress < 0.3) {
+      const exitP = progress / 0.3;
+      prevAlpha = 1 - exitP;
+      prevY = h / 2 + exitP * 60;
+      ctx.fillStyle = `rgba(255,255,255,${prevAlpha * 0.5})`;
+      ctx.fillText(prevText, w / 2, prevY);
+    }
+
+    // Entering line (current)
+    if (progress < 0.35) {
+      const enterP = ease(progress / 0.35);
+      const y = -30 + (h / 2 + 30) * enterP;
+      const alpha = enterP;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fillText(text, w / 2, y);
+    } else {
+      // Settled
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      ctx.fillText(text, w / 2, h / 2);
+
+      // Gentle float
+      const floatY = Math.sin((progress - 0.35) * 8) * 2;
+      ctx.clearRect(0, 0, w, h);
+      // Redraw particles
+      for (let i = 0; i < 15; i++) {
+        const px = (Math.sin(Date.now() * 0.0003 + i * 2) * 0.5 + 0.5) * w;
+        const py = (Math.cos(Date.now() * 0.0004 + i * 3) * 0.5 + 0.5) * h;
+        ctx.fillStyle = 'rgba(99,102,241,0.15)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2 + Math.sin(i) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.font = 'bold 22px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(255,255,255,${1 - Math.max(0, (progress - 0.85)) * 6})`;
+      ctx.fillText(text, w / 2, h / 2 + floatY);
+    }
+
+    t++;
+    if (t % 180 === 0) {
+      prevText = text;
+      lineIdx++;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ---- DEMO B: Curved Fly-In ----
+(function() {
+  const { ctx, w, h } = setupCanvas('demoB');
+  let lineIdx = 0, t = 0;
+
+  function bezier(t, p0, p1, p2, p3) {
+    const u = 1 - t;
+    return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle bg
+    for (let i = 0; i < 12; i++) {
+      const px = (Math.sin(Date.now() * 0.0002 + i * 1.5) * 0.5 + 0.5) * w;
+      const py = (Math.cos(Date.now() * 0.0003 + i * 2.5) * 0.5 + 0.5) * h;
+      ctx.fillStyle = 'rgba(236,72,153,0.12)';
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const progress = (t % 180) / 180;
+    const text = lyrics[lineIdx % lyrics.length];
+    const fromLeft = lineIdx % 2 === 0;
+
+    ctx.font = 'bold 22px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+
+    if (progress < 0.4) {
+      const p = progress / 0.4;
+      const ep = 1 - Math.pow(1 - p, 3);
+      let x, y;
+
+      if (fromLeft) {
+        x = bezier(ep, -120, w * 0.1, w * 0.7, w / 2);
+        y = bezier(ep, h * 0.2, h * 0.1, h * 0.6, h / 2);
+      } else {
+        x = bezier(ep, w + 120, w * 0.9, w * 0.3, w / 2);
+        y = bezier(ep, h * 0.8, h * 0.9, h * 0.4, h / 2);
+      }
+
+      ctx.fillStyle = `rgba(255,255,255,${ep})`;
+      ctx.fillText(text, x, y);
+    } else {
+      ctx.fillStyle = `rgba(255,255,255,${1 - Math.max(0, (progress - 0.85)) * 6})`;
+      ctx.fillText(text, w / 2, h / 2);
+    }
+
+    t++;
+    if (t % 180 === 0) lineIdx++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ---- DEMO C: Karaoke Wipe ----
+(function() {
+  const { ctx, w, h } = setupCanvas('demoC');
+  let lineIdx = 0, t = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle bg
+    for (let i = 0; i < 10; i++) {
+      const px = (Math.sin(Date.now() * 0.00025 + i * 2) * 0.5 + 0.5) * w;
+      const py = (Math.cos(Date.now() * 0.00035 + i * 3) * 0.5 + 0.5) * h;
+      ctx.fillStyle = 'rgba(52,211,153,0.12)';
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const progress = (t % 180) / 180;
+    const text = lyrics[lineIdx % lyrics.length];
+    const words = text.split(' ');
+
+    ctx.font = 'bold 22px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+
+    // Measure total width
+    const totalW = ctx.measureText(text).width;
+    let x = w / 2 - totalW / 2;
+
+    for (let i = 0; i < words.length; i++) {
+      const wordProgress = i / words.length;
+      const isActive = progress >= wordProgress && progress < (i + 1) / words.length;
+      const isPast = progress >= (i + 1) / words.length;
+
+      if (isActive) {
+        ctx.fillStyle = 'rgba(255,255,255,1)';
+        ctx.shadowColor = 'rgba(99,102,241,0.8)';
+        ctx.shadowBlur = 15;
+      } else if (isPast) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.shadowBlur = 0;
+      }
+
+      const ww = ctx.measureText(words[i] + ' ').width;
+      ctx.textAlign = 'left';
+      ctx.fillText(words[i], x, h / 2);
+      x += ww;
+    }
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center';
+
+    // Next line preview (ghosted below)
+    const nextText = lyrics[(lineIdx + 1) % lyrics.length];
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillText(nextText, w / 2, h / 2 + 36);
+
+    t++;
+    if (t % 180 === 0) lineIdx++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ---- DEMO D: Hybrid ----
+(function() {
+  const { ctx, w, h } = setupCanvas('demoD');
+  let lineIdx = 0, t = 0;
+
+  function bezier(t, p0, p1, p2, p3) {
+    const u = 1 - t;
+    return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    for (let i = 0; i < 12; i++) {
+      const px = (Math.sin(Date.now() * 0.0002 + i * 1.8) * 0.5 + 0.5) * w;
+      const py = (Math.cos(Date.now() * 0.0003 + i * 2.2) * 0.5 + 0.5) * h;
+      ctx.fillStyle = 'rgba(168,85,247,0.12)';
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const progress = (t % 180) / 180;
+    const text = lyrics[lineIdx % lyrics.length];
+    const words = text.split(' ');
+    const fromLeft = lineIdx % 2 === 0;
+
+    ctx.font = 'bold 22px -apple-system, system-ui, sans-serif';
+
+    // Phase 1: Curved entry (0-0.25)
+    if (progress < 0.25) {
+      const p = progress / 0.25;
+      const ep = 1 - Math.pow(1 - p, 3);
+      let x, y;
+
+      if (fromLeft) {
+        x = bezier(ep, -120, w * 0.1, w * 0.65, w / 2);
+        y = bezier(ep, h * 0.15, h * 0.1, h * 0.55, h / 2);
+      } else {
+        x = bezier(ep, w + 120, w * 0.9, w * 0.35, w / 2);
+        y = bezier(ep, h * 0.85, h * 0.9, h * 0.45, h / 2);
+      }
+
+      ctx.fillStyle = `rgba(255,255,255,${ep})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, x, y);
+    }
+    // Phase 2: Karaoke wipe (0.25-0.9)
+    else if (progress < 0.9) {
+      const wipeProgress = (progress - 0.25) / 0.65;
+      const totalW = ctx.measureText(text).width;
+      let x = w / 2 - totalW / 2;
+
+      for (let i = 0; i < words.length; i++) {
+        const wordP = i / words.length;
+        const isActive = wipeProgress >= wordP && wipeProgress < (i + 1) / words.length;
+        const isPast = wipeProgress >= (i + 1) / words.length;
+
+        if (isActive) {
+          ctx.fillStyle = 'rgba(255,255,255,1)';
+          ctx.shadowColor = 'rgba(168,85,247,0.8)';
+          ctx.shadowBlur = 15;
+        } else if (isPast) {
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.shadowBlur = 0;
+        }
+
+        const ww = ctx.measureText(words[i] + ' ').width;
+        ctx.textAlign = 'left';
+        ctx.fillText(words[i], x, h / 2);
+        x += ww;
+      }
+      ctx.shadowBlur = 0;
+    }
+    // Phase 3: Fade out
+    else {
+      const fadeP = (progress - 0.9) / 0.1;
+      ctx.fillStyle = `rgba(255,255,255,${1 - fadeP})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, w / 2, h / 2);
+    }
+
+    // Next line preview
+    if (progress > 0.7) {
+      const nextText = lyrics[(lineIdx + 1) % lyrics.length];
+      const previewAlpha = Math.min(0.15, (progress - 0.7) * 0.5);
+      ctx.fillStyle = `rgba(255,255,255,${previewAlpha})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(nextText, w / 2, h / 2 + 36);
+    }
+
+    t++;
+    if (t % 180 === 0) lineIdx++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
