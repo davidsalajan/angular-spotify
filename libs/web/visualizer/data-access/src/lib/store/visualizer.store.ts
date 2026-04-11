@@ -11,12 +11,13 @@ interface VisualizerState {
   isShownAsPiP: boolean;
   isVisible: boolean;
   selectedVisualizerType: VisualizerType;
+  isLyricsOverlayOn: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class VisualizerStore extends ComponentStore<VisualizerState> {
   constructor(private router: Router, private location: Location) {
-    super({ isVisible: false, isShownAsPiP: false, isFirstTime: true, selectedVisualizerType: VisualizerType.Particles });
+    super({ isVisible: false, isShownAsPiP: false, isFirstTime: true, selectedVisualizerType: VisualizerType.Particles, isLyricsOverlayOn: false });
     this.showVisualizerAsPiP$();
   }
 
@@ -25,6 +26,18 @@ export class VisualizerStore extends ComponentStore<VisualizerState> {
   readonly showPiPVisualizer$ = this.select((s) => s.isVisible && s.isShownAsPiP);
 
   readonly visualizerType$ = this.select((s) => s.selectedVisualizerType);
+
+  readonly isLyricsOverlayOn$ = this.select((s) => s.isLyricsOverlayOn);
+
+  // Overlay shows when toggled on AND visualizer is full-screen (not PIP)
+  readonly showLyricsOverlay$ = this.select(
+    (s) => s.isLyricsOverlayOn && s.isVisible && !s.isShownAsPiP
+  );
+
+  readonly toggleLyricsOverlay = this.updater((state) => ({
+    ...state,
+    isLyricsOverlayOn: !state.isLyricsOverlayOn
+  }));
 
   readonly setVisualizerType = this.updater((state, type: VisualizerType) => ({
     ...state,
