@@ -22,7 +22,7 @@
 }
 
 .previous-line {
-  font-size: 1.25rem;
+  @apply text-xl md:text-2xl lg:text-3xl;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.2);
   min-height: 1.75rem;
@@ -30,9 +30,8 @@
 }
 
 .current-line {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.4;
+  @apply text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold;
+  line-height: 1.1;
   color: #ffffff;
   min-height: 3rem;
   text-shadow:
@@ -86,7 +85,7 @@
 }
 
 .next-line {
-  font-size: 1.25rem;
+  @apply text-xl md:text-2xl lg:text-3xl;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.15);
   min-height: 1.75rem;
