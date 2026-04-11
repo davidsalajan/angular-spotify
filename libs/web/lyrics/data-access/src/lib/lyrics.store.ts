@@ -15,7 +15,6 @@ import {
   tap,
   withLatestFrom
 } from 'rxjs/operators';
-import { VisualizerStore } from '@angular-spotify/web/visualizer/data-access';
 import { LrclibApiService } from './lrclib-api.service';
 import { LyricsState } from './lyrics.models';
 
@@ -35,8 +34,7 @@ export class LyricsStore extends ComponentStore<LyricsState> {
     private router: Router,
     private location: Location,
     private playbackStore: PlaybackStore,
-    private lrclibApi: LrclibApiService,
-    private visualizerStore: VisualizerStore
+    private lrclibApi: LrclibApiService
   ) {
     super(initialState);
     this.showLyricsAsPiP$();
@@ -51,25 +49,6 @@ export class LyricsStore extends ComponentStore<LyricsState> {
   readonly status$ = this.select((s) => s.status);
   readonly showPiPLyrics$ = this.select(
     (s) => s.isVisible && s.isShownAsPiP && s.lyrics !== null && s.lyrics.length > 0
-  );
-
-  // Lyrics overlay shows when: synced + lyrics visible + visualizer is full-screen (not PIP)
-  readonly isVisualizerFullScreen$: Observable<boolean> = combineLatest([
-    this.visualizerStore.isVisible$,
-    this.visualizerStore.isShownAsPiP$
-  ]).pipe(
-    map(([isVisible, isShownAsPiP]) => isVisible && !isShownAsPiP)
-  );
-
-  readonly showLyricsOverlay$: Observable<boolean> = combineLatest([
-    this.isSynced$,
-    this.isVisible$,
-    this.lyrics$,
-    this.isVisualizerFullScreen$
-  ]).pipe(
-    map(([isSynced, isVisible, lyrics, vizFullScreen]) =>
-      isSynced && isVisible && lyrics !== null && lyrics.length > 0 && vizFullScreen
-    )
   );
 
   // Interpolated position that ticks every 100ms during playback.
