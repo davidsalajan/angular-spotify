@@ -48,6 +48,7 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
   ]).pipe(map(([isSynced, isPiP]) => isSynced && !isPiP));
   isLyricsOverlayOn$ = this.visualizerStore.isLyricsOverlayOn$;
 
+  @ViewChild('fullscreenContainer', { static: true }) fullscreenContainer!: ElementRef;
   @ViewChild('visualizer', { static: true }) visualizer!: ElementRef;
 
   constructor(
@@ -135,10 +136,10 @@ export class WebVisualizerUiComponent implements OnInit, OnDestroy {
   }
 
   toggleFullscreen() {
-    if (this.isFullscreen) {
+    if (this.document.fullscreenElement) {
       this.document.exitFullscreen();
     } else {
-      (this.visualizer.nativeElement as HTMLElement).requestFullscreen();
+      (this.fullscreenContainer.nativeElement as HTMLElement).requestFullscreen();
     }
     this.isFullscreen = !this.isFullscreen;
   }
