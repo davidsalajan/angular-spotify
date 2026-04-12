@@ -11,11 +11,20 @@ interface CurveOrigin {
   controlY1: string;
 }
 
+interface DriftPattern {
+  x1: string;
+  y1: string;
+  x2: string;
+  y2: string;
+}
+
 interface OverlayLines {
   previousText: string;
   currentText: string;
   nextText: string;
   entryOrigin: CurveOrigin;
+  drift: DriftPattern;
+  floatDuration: string;
 }
 
 const CALM_ORIGINS: CurveOrigin[] = [
@@ -23,6 +32,15 @@ const CALM_ORIGINS: CurveOrigin[] = [
   { startX: 'calc(100% + 120px)', startY: '60%', controlX1: '90%', controlY1: '55%' },
   { startX: '-100px', startY: '55%', controlX1: '15%', controlY1: '50%' },
   { startX: 'calc(100% + 100px)', startY: '45%', controlX1: '85%', controlY1: '48%' }
+];
+
+const DRIFT_PATTERNS: DriftPattern[] = [
+  { x1: '-10px', y1: '-8px', x2: '10px', y2: '8px' },   // top-left → bottom-right
+  { x1: '-10px', y1: '8px', x2: '10px', y2: '-8px' },    // bottom-left → top-right
+  { x1: '10px', y1: '-8px', x2: '-10px', y2: '8px' },    // top-right → bottom-left
+  { x1: '10px', y1: '8px', x2: '-10px', y2: '-8px' },    // bottom-right → top-left
+  { x1: '-12px', y1: '0', x2: '8px', y2: '6px' },        // left → bottom-right
+  { x1: '0', y1: '-10px', x2: '-8px', y2: '6px' },       // top → bottom-left
 ];
 
 const INTENSE_ORIGINS: CurveOrigin[] = [
@@ -63,12 +81,17 @@ export class LyricsOverlayComponent implements OnInit {
 
         const energy = this.estimateEnergy(line.time, segments);
         const origin = this.pickOrigin(energy);
+        const drift = DRIFT_PATTERNS[Math.floor(Math.random() * DRIFT_PATTERNS.length)];
+        const nextTime = lyrics[activeIdx + 1]?.time;
+        const durationSec = nextTime != null ? Math.max((nextTime - line.time) / 1000, 1) : 5;
 
         return {
           previousText: activeIdx > 0 ? (lyrics[activeIdx - 1]?.text || '') : '',
           currentText: line.text,
           nextText: lyrics[activeIdx + 1]?.text || '',
-          entryOrigin: origin
+          entryOrigin: origin,
+          drift,
+          floatDuration: `${durationSec}s`
         };
       }),
       distinctUntilChanged((a, b) => {
