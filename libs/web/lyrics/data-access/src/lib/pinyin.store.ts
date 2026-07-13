@@ -5,7 +5,7 @@ import { combineLatest, Observable } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LyricsStore } from './lyrics.store';
 import { LyricLine } from './lyrics.models';
-import { containsHan } from './han-util';
+import { containsHan } from './script-util';
 import {
   BATCH_SIZE,
   DETECT_SAMPLE_LINES,
