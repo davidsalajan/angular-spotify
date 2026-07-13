@@ -89,9 +89,9 @@ Expected: FAIL — `containsJapanese` is not exported.
 `libs/web/lyrics/data-access/src/lib/script-util.ts` becomes:
 
 ```ts
-const HAN_REGEX = /[㐀-䶿一-鿿豈-﫿]/;
+const HAN_REGEX = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/; // escaped: U+F900 literal gets NFC-normalized to U+8C48
 // Hiragana (U+3040–U+309F) + Katakana (U+30A0–U+30FF).
-const KANA_REGEX = /[぀-ヿ]/;
+const KANA_REGEX = /[\u3040-\u30FF]/;
 
 export function containsHan(text: string): boolean {
   return HAN_REGEX.test(text);
