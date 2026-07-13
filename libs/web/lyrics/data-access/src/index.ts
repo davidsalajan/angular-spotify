@@ -4,3 +4,5 @@ export * from './lib/lyrics.store';
 export * from './lib/script-util';
 export * from './lib/pinyin.models';
 export * from './lib/pinyin.store';
+export * from './lib/annotation.models';
+export * from './lib/annotators';
