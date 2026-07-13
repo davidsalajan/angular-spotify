@@ -191,15 +191,18 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
     return this.queue.splice(0, BATCH_SIZE);
   }
 
-  /**
-   * config.kind === 'prompt' is the only engine today; a future 'translator'
-   * kind adds a branch here without touching the drain machinery.
-   */
   private createEngineFor(config: AnnotatorConfig): AnnotationEngine {
-    return this.ai.createPromptEngine({
-      systemPrompt: config.systemPrompt,
-      batchInstruction: config.batchInstruction
-    });
+    switch (config.kind) {
+      // 'prompt' is the only engine today; a future 'translator' kind adds a
+      // case here without touching the drain machinery.
+      case 'prompt':
+        return this.ai.createPromptEngine({
+          systemPrompt: config.systemPrompt,
+          batchInstruction: config.batchInstruction
+        });
+      default:
+        throw new Error(`No annotation engine for kind: ${config.kind as string}`);
+    }
   }
 
   private async drainQueue(): Promise<void> {

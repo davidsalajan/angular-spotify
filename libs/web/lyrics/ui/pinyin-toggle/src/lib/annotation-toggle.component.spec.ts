@@ -99,18 +99,23 @@ describe('AnnotationToggleComponent', () => {
   });
 
   describe('tooltip copy comes from the annotator config', () => {
-    it('uses tooltipHide when enabled', () => {
+    const tooltipOnButton = () => {
+      const btn = fixture.debugElement.query(By.css('button'));
+      return btn.attributes['ng-reflect-nz-tooltip-title'] ?? btn.properties['nzTooltipTitle'];
+    };
+
+    it('binds tooltipHide when enabled', () => {
       activeAnnotator$.next(ROMAJI_ANNOTATOR);
       enabled$.next(true);
       fixture.detectChanges();
-      expect(ROMAJI_ANNOTATOR.toggle.tooltipHide).toBe('Hide romaji');
+      expect(tooltipOnButton()).toBe('Hide romaji');
     });
 
-    it('uses tooltipShow when disabled', () => {
+    it('binds tooltipShow when disabled', () => {
       activeAnnotator$.next(ROMAJI_ANNOTATOR);
       enabled$.next(false);
       fixture.detectChanges();
-      expect(ROMAJI_ANNOTATOR.toggle.tooltipShow).toBe('Show romaji');
+      expect(tooltipOnButton()).toBe('Show romaji');
     });
   });
 });

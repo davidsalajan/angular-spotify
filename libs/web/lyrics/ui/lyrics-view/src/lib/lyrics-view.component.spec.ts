@@ -30,7 +30,7 @@ describe('LyricsViewComponent — pinyin', () => {
     expect(el.querySelector('.annotation-line')).toBeNull();
   });
 
-  it('exposes a annotationFor helper used by the template', () => {
+  it('exposes an annotationFor helper used by the template', () => {
     const c = fixture.componentInstance;
     c.annotationByIndex = { 2: { text: '再见', annotation: 'zài jiàn', status: 'done' } };
     expect(c.annotationFor(2)).toBe('zài jiàn');
