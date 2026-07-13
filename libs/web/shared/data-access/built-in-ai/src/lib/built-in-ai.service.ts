@@ -1,9 +1,21 @@
 import { Injectable } from '@angular/core';
-import { CreateSessionOptions, LanguageDetectionResult, PinyinSession } from './built-in-ai.types';
+import {
+  AiAvailability,
+  AnnotationEngine,
+  AnnotationSession,
+  CreateSessionOptions,
+  LanguageDetectionResult,
+  PromptEngineSpec
+} from './built-in-ai.types';
 
+/** @deprecated Lives in the pinyin annotator config after the store migration. */
 export const PINYIN_SYSTEM_PROMPT =
   'You are a precise Chinese-to-Hanyu-Pinyin transliterator. ' +
   'Output pinyin WITH tone marks (ā á ǎ à). Do not translate meaning.';
+
+const PINYIN_BATCH_INSTRUCTION =
+  'Convert each line of this Chinese text to Hanyu Pinyin with tone marks. ' +
+  'Return ONLY a JSON array of strings, one pinyin line per input line, no extra text.';
 
 @Injectable({ providedIn: 'root' })
 export class BuiltInAiService {
@@ -13,6 +25,17 @@ export class BuiltInAiService {
 
   isDetectorAvailable(): boolean {
     return typeof globalThis.LanguageDetector !== 'undefined';
+  }
+
+  async checkAvailability(languages: string[]): Promise<AiAvailability> {
+    if (!globalThis.LanguageModel) {
+      return 'unavailable';
+    }
+    try {
+      return await globalThis.LanguageModel.availability({ languages });
+    } catch {
+      return 'unavailable';
+    }
   }
 
   async detectLanguage(text: string): Promise<LanguageDetectionResult | null> {
@@ -31,39 +54,79 @@ export class BuiltInAiService {
     }
   }
 
-  async createPinyinSession(opts: CreateSessionOptions = {}): Promise<PinyinSession> {
+  async createSession(
+    systemPrompt: string,
+    opts: CreateSessionOptions = {}
+  ): Promise<AnnotationSession> {
     if (!this.isPromptApiAvailable()) {
       throw new Error('Prompt API unavailable');
     }
     const t0 = performance.now();
     const session = await globalThis.LanguageModel!.create({
-      initialPrompts: [{ role: 'system', content: PINYIN_SYSTEM_PROMPT }],
+      initialPrompts: [{ role: 'system', content: systemPrompt }],
       signal: opts.signal,
       monitor: (m) =>
         m.addEventListener('downloadprogress', (e) => opts.onDownloadProgress?.(e.loaded))
     });
-    console.log(`[BuiltInAI] createPinyinSession: ${(performance.now() - t0).toFixed(1)}ms`);
+    console.log(`[BuiltInAI] createSession: ${(performance.now() - t0).toFixed(1)}ms`);
     return session;
   }
 
-  async promptPinyinBatch(
-    session: PinyinSession,
+  async promptBatch(
+    session: AnnotationSession,
+    instruction: string,
     lines: string[],
     signal?: AbortSignal
   ): Promise<string[]> {
-    const prompt =
-      'Convert each line of this Chinese text to Hanyu Pinyin with tone marks. ' +
-      'Return ONLY a JSON array of strings, one pinyin line per input line, no extra text.\n\n' +
-      lines.join('\n');
-    console.log(`[BuiltInAI] promptPinyinBatch → sending ${lines.length} lines:`, lines);
+    const prompt = `${instruction}\n\n${lines.join('\n')}`;
     const t0 = performance.now();
     const raw = await session.prompt(prompt, { signal });
-    console.log(`[BuiltInAI] promptPinyinBatch ← ${(performance.now() - t0).toFixed(1)}ms raw:`, raw);
+    console.log(`[BuiltInAI] promptBatch ← ${(performance.now() - t0).toFixed(1)}ms for ${lines.length} lines`);
     const parsed = this.parseArray(raw);
     if (!parsed || parsed.length !== lines.length) {
-      throw new Error(`Pinyin parse failed: expected ${lines.length} lines`);
+      throw new Error(`Batch parse failed: expected ${lines.length} lines`);
     }
     return parsed;
+  }
+
+  /**
+   * A lazily-prepared Prompt API engine bound to one annotator's prompts.
+   * ensureReady is idempotent; destroy releases the session (a new ensureReady
+   * recreates it).
+   */
+  createPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
+    let session: AnnotationSession | null = null;
+    return {
+      ensureReady: async (opts: CreateSessionOptions = {}) => {
+        if (!session) {
+          session = await this.createSession(spec.systemPrompt, opts);
+        }
+      },
+      annotateBatch: (lines: string[], signal?: AbortSignal) => {
+        if (!session) {
+          return Promise.reject(new Error('Annotation engine not ready'));
+        }
+        return this.promptBatch(session, spec.batchInstruction, lines, signal);
+      },
+      destroy: () => {
+        session?.destroy();
+        session = null;
+      }
+    };
+  }
+
+  /** @deprecated Use createSession. Removed in the lyrics-annotation store migration. */
+  createPinyinSession(opts: CreateSessionOptions = {}): Promise<AnnotationSession> {
+    return this.createSession(PINYIN_SYSTEM_PROMPT, opts);
+  }
+
+  /** @deprecated Use promptBatch. Removed in the lyrics-annotation store migration. */
+  promptPinyinBatch(
+    session: AnnotationSession,
+    lines: string[],
+    signal?: AbortSignal
+  ): Promise<string[]> {
+    return this.promptBatch(session, PINYIN_BATCH_INSTRUCTION, lines, signal);
   }
 
   private parseArray(raw: string): string[] | null {

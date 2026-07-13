@@ -5,14 +5,34 @@ export interface LanguageDetectionResult {
   confidence: number;
 }
 
-export interface PinyinSession {
+export interface AnnotationSession {
   prompt(input: string, opts?: { signal?: AbortSignal }): Promise<string>;
   destroy(): void;
 }
 
+/** @deprecated Use AnnotationSession. Removed in the lyrics-annotation store migration. */
+export type PinyinSession = AnnotationSession;
+
 export interface CreateSessionOptions {
   onDownloadProgress?: (loaded: number) => void;
   signal?: AbortSignal;
+}
+
+/** What a prompt-based annotator needs from the Prompt API. */
+export interface PromptEngineSpec {
+  systemPrompt: string;
+  batchInstruction: string;
+}
+
+/**
+ * A prepared annotation backend for one song. Today only the Prompt API
+ * implementation exists (createPromptEngine); a Translator-API engine for
+ * translation pairs implements the same interface later.
+ */
+export interface AnnotationEngine {
+  ensureReady(opts?: CreateSessionOptions): Promise<void>;
+  annotateBatch(lines: string[], signal?: AbortSignal): Promise<string[]>;
+  destroy(): void;
 }
 
 // Minimal ambient typings for Chrome's global built-in AI APIs.
@@ -20,7 +40,7 @@ declare global {
   // eslint-disable-next-line no-var
   var LanguageModel:
     | {
-        availability(): Promise<AiAvailability>;
+        availability(options?: { languages: string[] }): Promise<AiAvailability>;
         create(options?: {
           initialPrompts?: { role: 'system' | 'user'; content: string }[];
           monitor?: (m: {
@@ -30,7 +50,7 @@ declare global {
             ): void;
           }) => void;
           signal?: AbortSignal;
-        }): Promise<PinyinSession>;
+        }): Promise<AnnotationSession>;
       }
     | undefined;
 
