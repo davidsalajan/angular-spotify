@@ -1,2 +1,2 @@
-export * from './lib/pinyin-toggle.module';
-export * from './lib/pinyin-toggle.component';
+export * from './lib/annotation-toggle.component';
+export * from './lib/annotation-toggle.module';

@@ -1,0 +1,14 @@
+<ng-container *ngIf="annotator$ | async as annotator">
+  <button
+    *ngIf="showToggle$ | async"
+    nz-tooltip
+    [nzTooltipTitle]="
+      (isEnabled$ | async) ? annotator.toggle.tooltipHide : annotator.toggle.tooltipShow
+    "
+    class="annotation-toggle-btn"
+    [class.active]="isEnabled$ | async"
+    (click)="toggle()"
+  >
+    <span class="annotation-toggle-label">{{ annotator.toggle.icon }}</span>
+  </button>
+</ng-container>

@@ -308,6 +308,3 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
     });
   }
 }
-
-/** @deprecated Temporary alias for the toggle lib; removed in the toggle migration task. */
-export { LyricsAnnotationStore as PinyinStore };
