@@ -139,6 +139,13 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
         annotationByIndex[i] = { text: line.text, annotation: null, status: 'pending' };
       }
     });
+    // No qualifying lines (e.g. LRCLIB served already-romanized lyrics that
+    // still detect as ja) — go silently inactive instead of leaving the
+    // "Preparing…" pill up with nothing to ever drain.
+    if (Object.keys(annotationByIndex).length === 0) {
+      this.patchState({ activeAnnotatorId: null });
+      return;
+    }
     this.patchState({ support: 'supported', activeAnnotatorId: config.id, annotationByIndex });
     // A paused song doesn't advance activeLine$, and detection may resolve after
     // the last activeLine emission — so the active-line driver would never open a

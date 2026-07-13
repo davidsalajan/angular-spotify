@@ -122,6 +122,18 @@ describe('LyricsAnnotationStore — detection gating', () => {
     expect(ai.checkAvailability).not.toHaveBeenCalled();
   });
 
+  it('stays silent when detection matches an annotator but no lines qualify (already-romanized lyrics)', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
+    store.init([
+      { time: 0, text: 'Furubita omoide no hokori wo harau' },
+      { time: 1, text: 'kaerou kaerou to' }
+    ]);
+    await flush();
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
+    expect(read<boolean>(store.showToggle$)).toBe(false);
+    expect(ai.createPromptEngine).not.toHaveBeenCalled();
+  });
+
   it('reports the romaji preparing label for a Japanese song', async () => {
     ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
     store.init([{ time: 0, text: 'ありがとう' }]);
