@@ -14,7 +14,7 @@
   height: 100%;
 }
 
-.pinyin-status {
+.annotation-status {
   @apply flex items-center gap-2 text-sm;
   position: absolute;
   right: 1.5rem;
@@ -25,18 +25,18 @@
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   pointer-events: none;
-  animation: pinyin-status-in 0.2s ease-out;
+  animation: annotation-status-in 0.2s ease-out;
 
   &__dot {
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 9999px;
     background: rgb(var(--primary-color, 30 215 96));
-    animation: pinyin-status-pulse 1s ease-in-out infinite;
+    animation: annotation-status-pulse 1s ease-in-out infinite;
   }
 }
 
-@keyframes pinyin-status-in {
+@keyframes annotation-status-in {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -48,7 +48,7 @@
   }
 }
 
-@keyframes pinyin-status-pulse {
+@keyframes annotation-status-pulse {
   0%,
   100% {
     opacity: 1;
@@ -60,8 +60,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pinyin-status,
-  .pinyin-status__dot {
+  .annotation-status,
+  .annotation-status__dot {
     animation: none;
   }
 }

@@ -8,15 +8,6 @@ import {
   PromptEngineSpec
 } from './built-in-ai.types';
 
-/** @deprecated Lives in the pinyin annotator config after the store migration. */
-export const PINYIN_SYSTEM_PROMPT =
-  'You are a precise Chinese-to-Hanyu-Pinyin transliterator. ' +
-  'Output pinyin WITH tone marks (ā á ǎ à). Do not translate meaning.';
-
-const PINYIN_BATCH_INSTRUCTION =
-  'Convert each line of this Chinese text to Hanyu Pinyin with tone marks. ' +
-  'Return ONLY a JSON array of strings, one pinyin line per input line, no extra text.';
-
 @Injectable({ providedIn: 'root' })
 export class BuiltInAiService {
   isPromptApiAvailable(): boolean {
@@ -113,20 +104,6 @@ export class BuiltInAiService {
         session = null;
       }
     };
-  }
-
-  /** @deprecated Use createSession. Removed in the lyrics-annotation store migration. */
-  createPinyinSession(opts: CreateSessionOptions = {}): Promise<AnnotationSession> {
-    return this.createSession(PINYIN_SYSTEM_PROMPT, opts);
-  }
-
-  /** @deprecated Use promptBatch. Removed in the lyrics-annotation store migration. */
-  promptPinyinBatch(
-    session: AnnotationSession,
-    lines: string[],
-    signal?: AbortSignal
-  ): Promise<string[]> {
-    return this.promptBatch(session, PINYIN_BATCH_INSTRUCTION, lines, signal);
   }
 
   private parseArray(raw: string): string[] | null {

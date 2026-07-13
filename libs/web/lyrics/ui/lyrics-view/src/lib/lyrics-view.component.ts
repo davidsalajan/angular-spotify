@@ -16,7 +16,7 @@ import {
   ViewChildren
 } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { LyricLine, PinyinLineState } from '@angular-spotify/web/lyrics/data-access';
+import { LyricLine, AnnotationLineState } from '@angular-spotify/web/lyrics/data-access';
 
 const PROGRAMMATIC_SCROLL_FALLBACK_MS = 500;
 const PROGRAMMATIC_SCROLL_SETTLE_MS = 150;
@@ -31,8 +31,8 @@ export class LyricsViewComponent implements OnChanges, AfterViewInit, OnDestroy 
   @Input() lyrics: LyricLine[] | null = null;
   @Input() activeLine = -1;
   @Input() isSynced = false;
-  @Input() pinyinByIndex: Record<number, PinyinLineState> = {};
-  @Input() pinyinEnabled = true;
+  @Input() annotationByIndex: Record<number, AnnotationLineState> = {};
+  @Input() annotationEnabled = true;
   @Output() seekTo = new EventEmitter<number>();
   @Output() visibleRangeChange = new EventEmitter<{ start: number; end: number }>();
   @ViewChildren('lyricLine') lyricLines!: QueryList<ElementRef>;
@@ -123,12 +123,12 @@ export class LyricsViewComponent implements OnChanges, AfterViewInit, OnDestroy 
     }
   }
 
-  pinyinFor(index: number): string | null {
-    // Returns rendered pinyin regardless of the enabled flag — visibility is
+  annotationFor(index: number): string | null {
+    // Returns rendered annotation regardless of the enabled flag — visibility is
     // handled with a CSS collapse class so hiding can animate out. The element
     // stays mounted (cache persists) so re-enabling is instant.
-    const entry = this.pinyinByIndex[index];
-    return entry && entry.status === 'done' ? entry.pinyin : null;
+    const entry = this.annotationByIndex[index];
+    return entry && entry.status === 'done' ? entry.annotation : null;
   }
 
   onSync(): void {

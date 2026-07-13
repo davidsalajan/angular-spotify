@@ -10,9 +10,6 @@ export interface AnnotationSession {
   destroy(): void;
 }
 
-/** @deprecated Use AnnotationSession. Removed in the lyrics-annotation store migration. */
-export type PinyinSession = AnnotationSession;
-
 export interface CreateSessionOptions {
   onDownloadProgress?: (loaded: number) => void;
   signal?: AbortSignal;

@@ -13,19 +13,15 @@
         [lyrics]="lyrics$ | async"
         [activeLine]="(activeLine$ | async) ?? -1"
         [isSynced]="(isSynced$ | async) ?? false"
-        [pinyinByIndex]="(pinyinByIndex$ | async) ?? {}"
-        [pinyinEnabled]="(enabled$ | async) ?? false"
+        [annotationByIndex]="(annotationByIndex$ | async) ?? {}"
+        [annotationEnabled]="(enabled$ | async) ?? false"
         (seekTo)="onSeekTo($event)"
         (visibleRangeChange)="onVisibleRangeChange($event)"
       ></as-lyrics-view>
-      @if (pinyinStatus$ | async; as pinyinStatus) {
-        <div class="pinyin-status" role="status" aria-live="polite">
-          <span class="pinyin-status__dot"></span>
-          <span>{{
-            pinyinStatus === 'downloading'
-              ? 'Downloading language model…'
-              : 'Preparing pinyin…'
-          }}</span>
+      @if (pageStatusText$ | async; as statusText) {
+        <div class="annotation-status" role="status" aria-live="polite">
+          <span class="annotation-status__dot"></span>
+          <span>{{ statusText }}</span>
         </div>
       }
     </div>

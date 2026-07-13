@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { LyricsStore, PinyinStore } from '@angular-spotify/web/lyrics/data-access';
+import { LyricsAnnotationStore, LyricsStore } from '@angular-spotify/web/lyrics/data-access';
 import { PlayerApiService } from '@angular-spotify/web/shared/data-access/spotify-api';
 
 @Component({
@@ -13,14 +13,14 @@ export class LyricsComponent {
   activeLine$ = this.lyricsStore.activeLine$;
   isSynced$ = this.lyricsStore.isSynced$;
   status$ = this.lyricsStore.status$;
-  pinyinByIndex$ = this.pinyinStore.pinyinByIndex$;
-  enabled$ = this.pinyinStore.enabled$;
-  pinyinStatus$ = this.pinyinStore.pinyinPageStatus$;
+  annotationByIndex$ = this.annotationStore.annotationByIndex$;
+  enabled$ = this.annotationStore.enabled$;
+  pageStatusText$ = this.annotationStore.pageStatusText$;
 
   constructor(
     private lyricsStore: LyricsStore,
     private playerApi: PlayerApiService,
-    private pinyinStore: PinyinStore
+    private annotationStore: LyricsAnnotationStore
   ) {}
 
   onSeekTo(positionMs: number): void {
@@ -28,6 +28,6 @@ export class LyricsComponent {
   }
 
   onVisibleRangeChange(range: { start: number; end: number }): void {
-    this.pinyinStore.setVisibleRange(range);
+    this.annotationStore.setVisibleRange(range);
   }
 }
