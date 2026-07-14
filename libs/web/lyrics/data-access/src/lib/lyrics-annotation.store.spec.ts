@@ -3,19 +3,26 @@ import { BehaviorSubject, of } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { BuiltInAiService } from '@angular-spotify/web/shared/data-access/built-in-ai';
 import { LyricsStore } from './lyrics.store';
-import { PinyinStore } from './pinyin.store';
+import { LyricsAnnotationStore } from './lyrics-annotation.store';
 import { LyricLine } from './lyrics.models';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-describe('PinyinStore — detection gating', () => {
-  let store: PinyinStore;
+const makeEngine = () => ({
+  ensureReady: jest.fn().mockResolvedValue(undefined),
+  annotateBatch: jest.fn().mockResolvedValue([]),
+  destroy: jest.fn()
+});
+
+describe('LyricsAnnotationStore — detection gating', () => {
+  let store: LyricsAnnotationStore;
+  let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
     isDetectorAvailable: jest.Mock;
+    checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPinyinSession: jest.Mock;
-    promptPinyinBatch: jest.Mock;
+    createPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
 
@@ -27,21 +34,22 @@ describe('PinyinStore — detection gating', () => {
 
   beforeEach(() => {
     lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
+    engine = makeEngine();
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
+      checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPinyinSession: jest.fn().mockResolvedValue({ prompt: jest.fn(), destroy: jest.fn() }),
-      promptPinyinBatch: jest.fn().mockResolvedValue([])
+      createPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
-        PinyinStore,
+        LyricsAnnotationStore,
         { provide: BuiltInAiService, useValue: ai },
         { provide: LyricsStore, useValue: { lyrics$, isSynced$: of(true), activeLine$: of(-1) } }
       ]
     });
-    store = TestBed.inject(PinyinStore);
+    store = TestBed.inject(LyricsAnnotationStore);
   });
 
   it('marks support unsupported and stays silent when Prompt API is missing', async () => {
@@ -59,11 +67,11 @@ describe('PinyinStore — detection gating', () => {
       { time: 2, text: '再见' }
     ]);
     await flush();
-    // Toggle stays hidden until pinyin actually renders, even though Chinese is detected.
+    // Toggle stays hidden until annotations actually render, even though Chinese is detected.
     expect(read<boolean>(store.showToggle$)).toBe(false);
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
+    const map = read<Record<number, any>>(store.annotationByIndex$);
     expect(Object.keys(map)).toEqual(['0', '2']);
-    expect(map[0]).toEqual({ text: '你好', pinyin: null, status: 'pending' });
+    expect(map[0]).toEqual({ text: '你好', annotation: null, status: 'pending' });
   });
 
   it('stays silent when detection is not Chinese', async () => {
@@ -79,16 +87,70 @@ describe('PinyinStore — detection gating', () => {
     await flush();
     expect(read<boolean>(store.showToggle$)).toBe(false);
   });
+
+  it('activates romaji for Japanese lyrics', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
+    engine.annotateBatch.mockResolvedValue(['arigatō']);
+    store.init([{ time: 0, text: 'ありがとう' }]);
+    await flush();
+    store.setActiveLine(0);
+    await flush();
+    await flush();
+    const map = read<Record<number, any>>(store.annotationByIndex$);
+    expect(map[0]).toEqual({ text: 'ありがとう', annotation: 'arigatō', status: 'done' });
+    // The engine was built from the romaji config's prompts.
+    expect(ai.createPromptEngine.mock.calls[0][0].systemPrompt).toContain('Hepburn');
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
+  });
+
+  it('checks availability with the matched annotator languages and stays silent when unavailable', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
+    ai.checkAvailability.mockResolvedValue('unavailable');
+    store.init([{ time: 0, text: 'ありがとう' }]);
+    await flush();
+    expect(ai.checkAvailability).toHaveBeenCalledWith(['ja', 'en']);
+    expect(read<boolean>(store.showToggle$)).toBe(false);
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
+    expect(ai.createPromptEngine).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for a detected language with no registered annotator', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'vi', confidence: 0.99 });
+    store.init([{ time: 0, text: 'xin chào' }]);
+    await flush();
+    expect(read<boolean>(store.showToggle$)).toBe(false);
+    expect(ai.checkAvailability).not.toHaveBeenCalled();
+  });
+
+  it('stays silent when detection matches an annotator but no lines qualify (already-romanized lyrics)', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
+    store.init([
+      { time: 0, text: 'Furubita omoide no hokori wo harau' },
+      { time: 1, text: 'kaerou kaerou to' }
+    ]);
+    await flush();
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
+    expect(read<boolean>(store.showToggle$)).toBe(false);
+    expect(ai.createPromptEngine).not.toHaveBeenCalled();
+  });
+
+  it('reports the romaji preparing label for a Japanese song', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'ja', confidence: 0.9 });
+    store.init([{ time: 0, text: 'ありがとう' }]);
+    await flush();
+    expect(read<string | null>(store.pageStatusText$)).toBe('Preparing romaji…');
+  });
 });
 
-describe('PinyinStore — windowing, queue, cache', () => {
-  let store: PinyinStore;
+describe('LyricsAnnotationStore — windowing, queue, cache', () => {
+  let store: LyricsAnnotationStore;
+  let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
     isDetectorAvailable: jest.Mock;
+    checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPinyinSession: jest.Mock;
-    promptPinyinBatch: jest.Mock;
+    createPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
   let isSynced$: BehaviorSubject<boolean>;
@@ -109,41 +171,42 @@ describe('PinyinStore — windowing, queue, cache', () => {
     lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
     isSynced$ = new BehaviorSubject<boolean>(true);
     activeLine$ = new BehaviorSubject<number>(-1);
+    engine = makeEngine();
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
+      checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPinyinSession: jest.fn().mockResolvedValue({ prompt: jest.fn(), destroy: jest.fn() }),
-      promptPinyinBatch: jest.fn().mockResolvedValue([])
+      createPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
-        PinyinStore,
+        LyricsAnnotationStore,
         { provide: BuiltInAiService, useValue: ai },
         { provide: LyricsStore, useValue: { lyrics$, isSynced$, activeLine$ } }
       ]
     });
-    store = TestBed.inject(PinyinStore);
+    store = TestBed.inject(LyricsAnnotationStore);
     store.init(LINES);
     await flush();
     await flush();
   });
 
-  it('createPinyinSession is called once even with multiple drains', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
+  it('createPromptEngine is called once even with multiple drains', async () => {
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
     store.setActiveLine(0);
     await flush();
     await flush();
     store.setActiveLine(5);
     await flush();
     await flush();
-    expect(ai.createPinyinSession).toHaveBeenCalledTimes(1);
+    expect(ai.createPromptEngine).toHaveBeenCalledTimes(1);
   });
 
-  it('only one promptPinyinBatch in flight at a time (serial drain)', async () => {
+  it('only one annotateBatch in flight at a time (serial drain)', async () => {
     let inFlight = 0;
     let maxInFlight = 0;
-    ai.promptPinyinBatch.mockImplementation(() => {
+    engine.annotateBatch.mockImplementation(() => {
       inFlight++;
       maxInFlight = Math.max(maxInFlight, inFlight);
       return new Promise<string[]>((resolve) =>
@@ -164,18 +227,18 @@ describe('PinyinStore — windowing, queue, cache', () => {
   });
 
   it('marks batch lines loading then done on success', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setActiveLine(0);
     await flush();
     await flush();
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
+    const map = read<Record<number, any>>(store.annotationByIndex$);
     const statuses = Object.values(map).map((v: any) => v.status);
     expect(statuses.some((s) => s === 'done')).toBe(true);
   });
 
-  it('marks batch lines error on promptPinyinBatch failure, others unaffected', async () => {
+  it('marks batch lines error on annotateBatch failure, others unaffected', async () => {
     // seed two batches worth of lines (20 lines → 2+ batches of 8)
-    ai.promptPinyinBatch
+    engine.annotateBatch
       .mockRejectedValueOnce(new Error('AI error'))
       .mockResolvedValue(Array(8).fill('pīn yīn'));
     store.setActiveLine(15); // windowEnd = 15+10 = 25, covers all 20 lines
@@ -183,22 +246,22 @@ describe('PinyinStore — windowing, queue, cache', () => {
     await flush();
     await flush();
     await flush();
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
+    const map = read<Record<number, any>>(store.annotationByIndex$);
     const statuses = Object.values(map).map((v: any) => v.status);
     expect(statuses.some((s) => s === 'error')).toBe(true);
     expect(statuses.some((s) => s === 'done')).toBe(true);
   });
 
   it('done lines are not re-prompted (cache)', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setActiveLine(0);
     await flush();
     await flush();
-    const callCount = ai.promptPinyinBatch.mock.calls.length;
+    const callCount = engine.annotateBatch.mock.calls.length;
     store.setActiveLine(0); // same window — nothing new to fetch
     await flush();
     await flush();
-    expect(ai.promptPinyinBatch).toHaveBeenCalledTimes(callCount);
+    expect(engine.annotateBatch).toHaveBeenCalledTimes(callCount);
   });
 
   it('does not drain when disabled', async () => {
@@ -206,11 +269,11 @@ describe('PinyinStore — windowing, queue, cache', () => {
     store.setActiveLine(0);
     await flush();
     await flush();
-    expect(ai.promptPinyinBatch).not.toHaveBeenCalled();
+    expect(engine.annotateBatch).not.toHaveBeenCalled();
   });
 
   it('resumes draining when re-enabled', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setEnabled(false);
     store.setActiveLine(0);
     await flush();
@@ -218,20 +281,20 @@ describe('PinyinStore — windowing, queue, cache', () => {
     store.setEnabled(true);
     await flush();
     await flush();
-    expect(ai.promptPinyinBatch).toHaveBeenCalled();
+    expect(engine.annotateBatch).toHaveBeenCalled();
   });
 
   it('setVisibleRange triggers fetch for unsynced lines in range', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     // windowEnd = -1 (default after init with no activeLine set past it)
     store.setVisibleRange({ start: 0, end: 5 });
     await flush();
     await flush();
-    expect(ai.promptPinyinBatch).toHaveBeenCalled();
+    expect(engine.annotateBatch).toHaveBeenCalled();
   });
 
-  it('downloadState$ becomes ready after a successful drain that creates the session', async () => {
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+  it('downloadState$ becomes ready after a successful drain that creates the engine', async () => {
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setActiveLine(0);
     await flush();
     await flush();
@@ -240,13 +303,13 @@ describe('PinyinStore — windowing, queue, cache', () => {
     expect(state).toBe('ready');
   });
 
-  it('passes onDownloadProgress to createPinyinSession and progress callback flips downloadState to downloading', async () => {
+  it('passes onDownloadProgress to ensureReady and progress callback flips downloadState to downloading', async () => {
     let capturedOpts: { onDownloadProgress?: () => void } | undefined;
-    ai.createPinyinSession.mockImplementationOnce((opts: { onDownloadProgress?: () => void }) => {
+    engine.ensureReady.mockImplementationOnce((opts: { onDownloadProgress?: () => void }) => {
       capturedOpts = opts;
-      return Promise.resolve({ prompt: jest.fn(), destroy: jest.fn() });
+      return Promise.resolve();
     });
-    ai.promptPinyinBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setActiveLine(0);
     await flush();
     await flush();
@@ -261,8 +324,9 @@ describe('PinyinStore — windowing, queue, cache', () => {
   });
 });
 
-describe('PinyinStore — track change', () => {
-  let store: PinyinStore;
+describe('LyricsAnnotationStore — track change', () => {
+  let store: LyricsAnnotationStore;
+  let engine: any;
   let ai: any;
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
   const lines = (n: number, tag: string): LyricLine[] =>
@@ -275,36 +339,39 @@ describe('PinyinStore — track change', () => {
 
   beforeEach(() => {
     lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
-    const destroy = jest.fn();
+    engine = {
+      ensureReady: jest.fn().mockResolvedValue(undefined),
+      annotateBatch: jest.fn((b: string[]) => Promise.resolve(b.map((t) => 'py-' + t))),
+      destroy: jest.fn()
+    };
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
+      checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPinyinSession: jest.fn().mockResolvedValue({ prompt: jest.fn(), destroy }),
-      promptPinyinBatch: jest.fn((_s: any, b: string[]) => Promise.resolve(b.map((t) => 'py-' + t))),
-      _destroy: destroy
+      createPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
-        PinyinStore,
+        LyricsAnnotationStore,
         { provide: BuiltInAiService, useValue: ai },
         { provide: LyricsStore, useValue: { lyrics$, isSynced$: of(true), activeLine$: of(-1) } }
       ]
     });
-    store = TestBed.inject(PinyinStore);
+    store = TestBed.inject(LyricsAnnotationStore);
   });
 
-  it('resets state and destroys the session when the track changes', async () => {
+  it('resets state and destroys the engine when the track changes', async () => {
     lyrics$.next(lines(10, 'a'));
     await flush();
     store.setActiveLine(0);
     await flush(); await flush();
-    expect(read<Record<number, any>>(store.pinyinByIndex$)[0].status).toBe('done');
+    expect(read<Record<number, any>>(store.annotationByIndex$)[0].status).toBe('done');
 
     lyrics$.next(lines(10, 'b'));
     await flush();
-    expect(ai._destroy).toHaveBeenCalled();
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
+    expect(engine.destroy).toHaveBeenCalled();
+    const map = read<Record<number, any>>(store.annotationByIndex$);
     expect(map[0].status).toBe('pending'); // fresh seed for new track
     expect(map[0].text).toBe('b0汉');
   });
@@ -329,8 +396,8 @@ describe('PinyinStore — track change', () => {
     await flush();
     await flush();
 
-    // pinyinByIndex must only contain 'b' lines — trackA must NOT have overwritten
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
+    // annotationByIndex must only contain 'b' lines — trackA must NOT have overwritten
+    const map = read<Record<number, any>>(store.annotationByIndex$);
     const entries = Object.values(map) as Array<{ text: string }>;
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.every((e) => e.text.startsWith('b'))).toBe(true);
@@ -340,7 +407,7 @@ describe('PinyinStore — track change', () => {
     // Slow first batch — resolves only when we manually tick
     let resolveSlow!: (v: string[]) => void;
     const slowBatch = new Promise<string[]>((res) => { resolveSlow = res; });
-    ai.promptPinyinBatch.mockImplementationOnce(() => slowBatch);
+    engine.annotateBatch.mockImplementationOnce(() => slowBatch);
 
     lyrics$.next(lines(5, 'a'));
     await flush(); // detectAndSeed completes
@@ -349,33 +416,68 @@ describe('PinyinStore — track change', () => {
 
     // Track changes BEFORE the slow batch resolves
     lyrics$.next(lines(5, 'b'));
-    await flush(); // reset() is called; old session is destroyed; new detectAndSeed seeds 'b' lines
+    await flush(); // reset() is called; old engine is destroyed; new detectAndSeed seeds 'b' lines
 
     // Now resolve the old slow batch (simulates AI returning late)
     resolveSlow(Array(5).fill('stale-py'));
     await flush();
     await flush();
 
-    // The old session's destroy must have been called
-    expect(ai._destroy).toHaveBeenCalled();
+    // The old engine's destroy must have been called
+    expect(engine.destroy).toHaveBeenCalled();
 
-    // New track's pinyinByIndex must only contain 'b' lines — no stale 'a' data
-    const map = read<Record<number, any>>(store.pinyinByIndex$);
-    const entries = Object.values(map) as Array<{ text: string; status: string; pinyin: string | null }>;
+    // New track's annotationByIndex must only contain 'b' lines — no stale 'a' data
+    const map = read<Record<number, any>>(store.annotationByIndex$);
+    const entries = Object.values(map) as Array<{ text: string; status: string; annotation: string | null }>;
     expect(entries.every((e) => e.text.startsWith('b'))).toBe(true);
-    // No phantom 'done' entries carrying stale pinyin
-    expect(entries.every((e) => e.pinyin !== 'stale-py')).toBe(true);
+    // No phantom 'done' entries carrying stale annotations
+    expect(entries.every((e) => e.annotation !== 'stale-py')).toBe(true);
+  });
+
+  it('destroys an engine whose preparation finishes after a track change instead of adopting it', async () => {
+    let resolveReady!: () => void;
+    const engineA = {
+      ensureReady: jest.fn(() => new Promise<void>((r) => { resolveReady = r; })),
+      annotateBatch: jest.fn(),
+      destroy: jest.fn()
+    };
+    const engineB = {
+      ensureReady: jest.fn().mockResolvedValue(undefined),
+      annotateBatch: jest.fn((b: string[]) => Promise.resolve(b.map(() => 'rōmaji'))),
+      destroy: jest.fn()
+    };
+    ai.createPromptEngine.mockReturnValueOnce(engineA).mockReturnValueOnce(engineB);
+
+    lyrics$.next(lines(3, 'a'));            // zh track
+    await flush();
+    store.setActiveLine(0);                  // drain starts; engineA.ensureReady pending
+    await flush();
+
+    ai.detectLanguage.mockResolvedValueOnce({ lang: 'ja', confidence: 0.9 });
+    lyrics$.next([{ time: 0, text: 'ありがとう' }]);  // ja track before engineA is ready
+    await flush();
+
+    resolveReady();                          // stale zh engine finishes preparing late
+    await flush();
+    store.setActiveLine(0);
+    await flush();
+    await flush();
+
+    expect(engineA.destroy).toHaveBeenCalled();      // orphan destroyed, never adopted
+    expect(engineB.annotateBatch).toHaveBeenCalled(); // ja track got its own engine
+    expect(engineA.annotateBatch).not.toHaveBeenCalled();
   });
 });
 
-describe('PinyinStore — toggle visibility and page status', () => {
-  let store: PinyinStore;
+describe('LyricsAnnotationStore — toggle visibility and page status', () => {
+  let store: LyricsAnnotationStore;
+  let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
     isDetectorAvailable: jest.Mock;
+    checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPinyinSession: jest.Mock;
-    promptPinyinBatch: jest.Mock;
+    createPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
   let isSynced$: BehaviorSubject<boolean>;
@@ -392,24 +494,26 @@ describe('PinyinStore — toggle visibility and page status', () => {
   const configure = () => {
     TestBed.configureTestingModule({
       providers: [
-        PinyinStore,
+        LyricsAnnotationStore,
         { provide: BuiltInAiService, useValue: ai },
         { provide: LyricsStore, useValue: { lyrics$, isSynced$, activeLine$ } }
       ]
     });
-    store = TestBed.inject(PinyinStore);
+    store = TestBed.inject(LyricsAnnotationStore);
   };
 
   beforeEach(() => {
     lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
     isSynced$ = new BehaviorSubject<boolean>(true);
     activeLine$ = new BehaviorSubject<number>(-1);
+    engine = makeEngine();
+    engine.annotateBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
+      checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPinyinSession: jest.fn().mockResolvedValue({ prompt: jest.fn(), destroy: jest.fn() }),
-      promptPinyinBatch: jest.fn().mockResolvedValue(Array(8).fill('pīn yīn'))
+      createPromptEngine: jest.fn(() => engine)
     };
   });
 
@@ -418,7 +522,7 @@ describe('PinyinStore — toggle visibility and page status', () => {
     store.init(LINES);
     await flush();
     expect(read<boolean>(store.showToggle$)).toBe(false);
-    expect(read<string | null>(store.pinyinPageStatus$)).toBe('preparing');
+    expect(read<string | null>(store.pageStatusText$)).toBe('Preparing pinyin…');
   });
 
   it('shows the toggle and clears page status once a line renders pinyin', async () => {
@@ -428,9 +532,9 @@ describe('PinyinStore — toggle visibility and page status', () => {
     store.setActiveLine(0);
     await flush();
     await flush();
-    expect(read<boolean>(store.hasRenderedPinyin$)).toBe(true);
+    expect(read<boolean>(store.hasRenderedAnnotation$)).toBe(true);
     expect(read<boolean>(store.showToggle$)).toBe(true);
-    expect(read<string | null>(store.pinyinPageStatus$)).toBeNull();
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
   });
 
   it('reports no page status for a non-Chinese song', async () => {
@@ -438,19 +542,19 @@ describe('PinyinStore — toggle visibility and page status', () => {
     configure();
     store.init([{ time: 0, text: 'hello' }]);
     await flush();
-    expect(read<string | null>(store.pinyinPageStatus$)).toBeNull();
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
     expect(read<boolean>(store.showToggle$)).toBe(false);
   });
 
   it('reports "downloading" while the model is being fetched', async () => {
-    // Hold session creation open so downloadState stays "downloading".
-    ai.createPinyinSession.mockReturnValue(new Promise(() => undefined));
+    // Hold engine preparation open so downloadState stays "downloading".
+    engine.ensureReady.mockReturnValue(new Promise(() => undefined));
     configure();
     store.init(LINES);
     await flush();
     store.setActiveLine(0);
     await flush();
-    expect(read<string | null>(store.pinyinPageStatus$)).toBe('downloading');
+    expect(read<string | null>(store.pageStatusText$)).toBe('Downloading language model…');
     expect(read<boolean>(store.showToggle$)).toBe(false);
   });
 
@@ -459,9 +563,9 @@ describe('PinyinStore — toggle visibility and page status', () => {
     configure();
     store.init(LINES);
     await flush(); // detection resolves
-    await flush(); // session + drain
+    await flush(); // engine + drain
     await flush();
-    expect(read<boolean>(store.hasRenderedPinyin$)).toBe(true);
+    expect(read<boolean>(store.hasRenderedAnnotation$)).toBe(true);
     expect(read<boolean>(store.showToggle$)).toBe(true);
   });
 });

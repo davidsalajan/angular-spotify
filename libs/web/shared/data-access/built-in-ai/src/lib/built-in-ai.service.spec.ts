@@ -1,5 +1,5 @@
 import { BuiltInAiService } from './built-in-ai.service';
-import { PinyinSession } from './built-in-ai.types';
+import { AnnotationSession } from './built-in-ai.types';
 
 describe('BuiltInAiService — detection', () => {
   let service: BuiltInAiService;
@@ -50,48 +50,93 @@ describe('BuiltInAiService — detection', () => {
   });
 });
 
-describe('BuiltInAiService — pinyin', () => {
+describe('BuiltInAiService — generic annotation API', () => {
   let service: BuiltInAiService;
-  afterEach(() => { (globalThis as any).LanguageModel = undefined; });
-  beforeEach(() => { service = new BuiltInAiService(); });
+  afterEach(() => {
+    (globalThis as any).LanguageModel = undefined;
+  });
+  beforeEach(() => {
+    service = new BuiltInAiService();
+  });
 
-  const fakeSession = (output: string): PinyinSession => ({
+  const fakeSession = (output: string): AnnotationSession => ({
     prompt: jest.fn().mockResolvedValue(output),
     destroy: jest.fn()
   });
 
-  it('createPinyinSession passes the system prompt and reports download progress', async () => {
-    const create = jest.fn().mockImplementation((opts) => {
-      opts.monitor?.({ addEventListener: (_t: string, cb: (e: { loaded: number }) => void) => cb({ loaded: 0.5 }) });
-      return Promise.resolve(fakeSession('[]'));
-    });
+  it('checkAvailability returns unavailable when the global is missing', async () => {
+    (globalThis as any).LanguageModel = undefined;
+    expect(await service.checkAvailability(['ja', 'en'])).toBe('unavailable');
+  });
+
+  it('checkAvailability passes the languages through to LanguageModel.availability', async () => {
+    const availability = jest.fn().mockResolvedValue('available');
+    (globalThis as any).LanguageModel = { availability, create: jest.fn() };
+    expect(await service.checkAvailability(['ja', 'en'])).toBe('available');
+    expect(availability).toHaveBeenCalledWith({ languages: ['ja', 'en'] });
+  });
+
+  it('checkAvailability returns unavailable when availability throws', async () => {
+    (globalThis as any).LanguageModel = {
+      availability: jest.fn().mockRejectedValue(new Error('boom')),
+      create: jest.fn()
+    };
+    expect(await service.checkAvailability(['ja', 'en'])).toBe('unavailable');
+  });
+
+  it('createSession passes the given system prompt', async () => {
+    const create = jest.fn().mockResolvedValue(fakeSession('[]'));
     (globalThis as any).LanguageModel = { create };
-    const onDownloadProgress = jest.fn();
-    await service.createPinyinSession({ onDownloadProgress });
-    const passed = create.mock.calls[0][0];
-    expect(passed.initialPrompts[0]).toEqual({ role: 'system', content: expect.stringContaining('Pinyin') });
-    expect(onDownloadProgress).toHaveBeenCalledWith(0.5);
+    await service.createSession('You are a romaji transliterator.');
+    expect(create.mock.calls[0][0].initialPrompts[0]).toEqual({
+      role: 'system',
+      content: 'You are a romaji transliterator.'
+    });
   });
 
-  it('promptPinyinBatch parses a clean JSON array', async () => {
-    const session = fakeSession('["nǐ hǎo", "zài jiàn"]');
-    const result = await service.promptPinyinBatch(session, ['你好', '再见']);
-    expect(result).toEqual(['nǐ hǎo', 'zài jiàn']);
+  it('promptBatch prefixes the instruction and parses the JSON array', async () => {
+    const session = fakeSession('["ki mi", "no na"]');
+    const result = await service.promptBatch(session, 'Convert to romaji.', ['君', 'の名']);
+    expect(result).toEqual(['ki mi', 'no na']);
+    expect((session.prompt as jest.Mock).mock.calls[0][0]).toBe('Convert to romaji.\n\n君\nの名');
   });
 
-  it('promptPinyinBatch extracts a JSON array embedded in prose (regex fallback)', async () => {
-    const session = fakeSession('Sure! Here you go:\n["nǐ hǎo", "zài jiàn"]\nHope that helps.');
-    const result = await service.promptPinyinBatch(session, ['你好', '再见']);
-    expect(result).toEqual(['nǐ hǎo', 'zài jiàn']);
+  it('promptBatch throws on length mismatch', async () => {
+    const session = fakeSession('["one"]');
+    await expect(service.promptBatch(session, 'x', ['a', 'b'])).rejects.toThrow();
   });
 
-  it('promptPinyinBatch throws when the parsed length does not match the input', async () => {
-    const session = fakeSession('["nǐ hǎo"]');
-    await expect(service.promptPinyinBatch(session, ['你好', '再见'])).rejects.toThrow();
+  it('createPromptEngine creates the session once across ensureReady calls and prompts with the spec', async () => {
+    const session = fakeSession('["kimi no"]');
+    const create = jest.fn().mockResolvedValue(session);
+    (globalThis as any).LanguageModel = { create };
+    const engine = service.createPromptEngine({
+      systemPrompt: 'SYS',
+      batchInstruction: 'INSTR'
+    });
+    await engine.ensureReady();
+    await engine.ensureReady();
+    expect(create).toHaveBeenCalledTimes(1);
+    const result = await engine.annotateBatch(['君の']);
+    expect(result).toEqual(['kimi no']);
+    expect((session.prompt as jest.Mock).mock.calls[0][0]).toBe('INSTR\n\n君の');
   });
 
-  it('promptPinyinBatch throws when no array can be parsed', async () => {
-    const session = fakeSession('I cannot do that.');
-    await expect(service.promptPinyinBatch(session, ['你好'])).rejects.toThrow();
+  it('createPromptEngine.destroy destroys the session and allows a fresh one', async () => {
+    const session = fakeSession('[]');
+    const create = jest.fn().mockResolvedValue(session);
+    (globalThis as any).LanguageModel = { create };
+    const engine = service.createPromptEngine({ systemPrompt: 'SYS', batchInstruction: 'I' });
+    await engine.ensureReady();
+    engine.destroy();
+    expect(session.destroy).toHaveBeenCalled();
+    await engine.ensureReady();
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('createPromptEngine.annotateBatch rejects when ensureReady has not run', async () => {
+    (globalThis as any).LanguageModel = { create: jest.fn() };
+    const engine = service.createPromptEngine({ systemPrompt: 'SYS', batchInstruction: 'I' });
+    await expect(engine.annotateBatch(['a'])).rejects.toThrow();
   });
 });

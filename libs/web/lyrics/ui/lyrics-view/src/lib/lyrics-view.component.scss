@@ -37,7 +37,7 @@
   }
 }
 
-.pinyin-line {
+.annotation-line {
   display: block;
   overflow: hidden;
   max-height: 4em;
@@ -48,11 +48,11 @@
     margin 0.22s ease;
 
   // Enter animation when visible (first render and re-enable).
-  &:not(.pinyin-line--hidden) {
-    animation: pinyin-in 0.22s ease-out;
+  &:not(.annotation-line--hidden) {
+    animation: annotation-in 0.22s ease-out;
   }
 
-  // Collapsed state — animates out when pinyin is toggled off.
+  // Collapsed state — animates out when the annotation is toggled off.
   &--hidden {
     max-height: 0;
     margin: 0;
@@ -62,12 +62,12 @@
   }
 }
 
-// Brighten the pinyin on the active line to match the highlighted hanzi.
-.lyric-line.active .pinyin-line {
+// Brighten the annotation on the active line to match the highlighted hanzi.
+.lyric-line.active .annotation-line {
   color: rgb(var(--text-baseline));
 }
 
-@keyframes pinyin-in {
+@keyframes annotation-in {
   from {
     opacity: 0;
     max-height: 0;
@@ -82,7 +82,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pinyin-line {
+  .annotation-line {
     animation: none;
     transition: none;
   }
