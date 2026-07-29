@@ -164,6 +164,51 @@ describe('BuiltInAiService — generic annotation API', () => {
     expect(clone.destroy).toHaveBeenCalled();
   });
 
+  it('destroy invalidates stale in-flight creations so late settlement does not leak', async () => {
+    const s1 = {
+      prompt: jest.fn(),
+      destroy: jest.fn(),
+      clone: jest.fn()
+    };
+    const s2Clone = {
+      prompt: jest.fn().mockResolvedValue('["result"]'),
+      destroy: jest.fn(),
+      clone: jest.fn()
+    };
+    const s2 = {
+      prompt: jest.fn(),
+      destroy: jest.fn(),
+      clone: jest.fn().mockResolvedValue(s2Clone)
+    };
+    let resolveCreate!: (s: unknown) => void;
+    const create = jest
+      .fn()
+      .mockReturnValueOnce(new Promise((r) => (resolveCreate = r)))
+      .mockResolvedValueOnce(s2);
+    (globalThis as any).LanguageModel = { create };
+    const engine = service.getPromptEngine({ id: 't-epoch', systemPrompt: 'S', batchInstruction: 'I' });
+    // Start first ensureReady, which starts creating
+    const firstReady = engine.ensureReady();
+    // Destroy immediately (increments epoch)
+    engine.destroy();
+    // Start second ensureReady, which creates a new session
+    await engine.ensureReady();
+    // Resolve the first create late with s1
+    resolveCreate(s1);
+    // Let the first promise settle (it should reject or complete without adopting s1)
+    await expect(firstReady).resolves.toBeUndefined();
+    // Verify s1 was destroyed by the late settlement, not adopted
+    expect(s1.destroy).toHaveBeenCalled();
+    // Verify subsequent annotateBatch uses s2, not s1
+    const result = await engine.annotateBatch(['test']);
+    expect(result).toEqual(['result']);
+    expect(s2.clone).toHaveBeenCalled();
+    expect(s2Clone.prompt).toHaveBeenCalled();
+    // s1 should never have been cloned or prompted
+    expect(s1.clone).not.toHaveBeenCalled();
+    expect(s1.prompt).not.toHaveBeenCalled();
+  });
+
   it('checkAvailability returns unavailable when the global is missing', async () => {
     (globalThis as any).LanguageModel = undefined;
     expect(await service.checkAvailability(['ja', 'en'])).toBe('unavailable');

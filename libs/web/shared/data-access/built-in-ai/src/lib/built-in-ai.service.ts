@@ -113,6 +113,7 @@ export class BuiltInAiService {
   private buildPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
     let session: AnnotationSession | null = null;
     let creating: Promise<void> | null = null;
+    let epoch = 0;
     return {
       // Memoizes the in-flight creation: the detectAndSeed warm-up and the
       // first drain both land here and share one LanguageModel.create().
@@ -121,13 +122,20 @@ export class BuiltInAiService {
           return Promise.resolve();
         }
         if (!creating) {
+          const started = epoch;
           creating = this.createSession(spec.systemPrompt, opts).then(
             (s) => {
+              if (started !== epoch) {
+                s.destroy(); // destroy() superseded this creation — don't adopt, don't leak
+                return;
+              }
               session = s;
               creating = null;
             },
             (err) => {
-              creating = null;
+              if (started === epoch) {
+                creating = null;
+              }
               throw err;
             }
           );
@@ -148,6 +156,7 @@ export class BuiltInAiService {
         }
       },
       destroy: () => {
+        epoch++;
         session?.destroy();
         session = null;
         creating = null;
