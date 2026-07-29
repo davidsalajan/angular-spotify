@@ -14,6 +14,9 @@ export class BuiltInAiService {
   /** One detector for the app's lifetime; cleared on failure so the next call retries. */
   private detector: Promise<DetectorInstance> | null = null;
 
+  /** One engine (and base session) per annotator id, kept for the app's lifetime. */
+  private engines = new Map<string, AnnotationEngine>();
+
   isPromptApiAvailable(): boolean {
     return typeof globalThis.LanguageModel !== 'undefined';
   }
@@ -94,11 +97,20 @@ export class BuiltInAiService {
   }
 
   /**
-   * A lazily-prepared Prompt API engine bound to one annotator's prompts.
-   * ensureReady is idempotent; destroy releases the session (a new ensureReady
-   * recreates it).
+   * The Prompt API engine for one annotator. Cached by spec.id: the base
+   * session survives track changes, so the second song in the same language
+   * starts warm.
    */
-  createPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
+  getPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
+    let engine = this.engines.get(spec.id);
+    if (!engine) {
+      engine = this.buildPromptEngine(spec);
+      this.engines.set(spec.id, engine);
+    }
+    return engine;
+  }
+
+  private buildPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
     let session: AnnotationSession | null = null;
     return {
       ensureReady: async (opts: CreateSessionOptions = {}) => {

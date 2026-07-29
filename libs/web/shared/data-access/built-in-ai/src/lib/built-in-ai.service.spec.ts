@@ -141,11 +141,12 @@ describe('BuiltInAiService — generic annotation API', () => {
     await expect(service.promptBatch(session, 'x', ['a', 'b'])).rejects.toThrow();
   });
 
-  it('createPromptEngine creates the session once across ensureReady calls and prompts with the spec', async () => {
+  it('getPromptEngine creates the session once across ensureReady calls and prompts with the spec', async () => {
     const session = fakeSession('["kimi no"]');
     const create = jest.fn().mockResolvedValue(session);
     (globalThis as any).LanguageModel = { create };
-    const engine = service.createPromptEngine({
+    const engine = service.getPromptEngine({
+      id: 't-once',
       systemPrompt: 'SYS',
       batchInstruction: 'INSTR'
     });
@@ -157,11 +158,11 @@ describe('BuiltInAiService — generic annotation API', () => {
     expect((session.prompt as jest.Mock).mock.calls[0][0]).toBe('INSTR\n\n君の');
   });
 
-  it('createPromptEngine.destroy destroys the session and allows a fresh one', async () => {
+  it('getPromptEngine.destroy destroys the session and allows a fresh one', async () => {
     const session = fakeSession('[]');
     const create = jest.fn().mockResolvedValue(session);
     (globalThis as any).LanguageModel = { create };
-    const engine = service.createPromptEngine({ systemPrompt: 'SYS', batchInstruction: 'I' });
+    const engine = service.getPromptEngine({ id: 't-destroy', systemPrompt: 'SYS', batchInstruction: 'I' });
     await engine.ensureReady();
     engine.destroy();
     expect(session.destroy).toHaveBeenCalled();
@@ -169,9 +170,18 @@ describe('BuiltInAiService — generic annotation API', () => {
     expect(create).toHaveBeenCalledTimes(2);
   });
 
-  it('createPromptEngine.annotateBatch rejects when ensureReady has not run', async () => {
+  it('getPromptEngine.annotateBatch rejects when ensureReady has not run', async () => {
     (globalThis as any).LanguageModel = { create: jest.fn() };
-    const engine = service.createPromptEngine({ systemPrompt: 'SYS', batchInstruction: 'I' });
+    const engine = service.getPromptEngine({ id: 't-notready', systemPrompt: 'SYS', batchInstruction: 'I' });
     await expect(engine.annotateBatch(['a'])).rejects.toThrow();
+  });
+
+  it('getPromptEngine returns the same engine for the same id and a new one per id', () => {
+    (globalThis as any).LanguageModel = { create: jest.fn() };
+    const a = service.getPromptEngine({ id: 'pinyin', systemPrompt: 'S', batchInstruction: 'I' });
+    const b = service.getPromptEngine({ id: 'pinyin', systemPrompt: 'S', batchInstruction: 'I' });
+    const c = service.getPromptEngine({ id: 'romaji', systemPrompt: 'S2', batchInstruction: 'I2' });
+    expect(b).toBe(a);
+    expect(c).not.toBe(a);
   });
 });

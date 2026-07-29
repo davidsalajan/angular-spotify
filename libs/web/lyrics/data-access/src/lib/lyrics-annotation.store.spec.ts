@@ -22,7 +22,7 @@ describe('LyricsAnnotationStore — detection gating', () => {
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPromptEngine: jest.Mock;
+    getPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
 
@@ -40,7 +40,7 @@ describe('LyricsAnnotationStore — detection gating', () => {
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPromptEngine: jest.fn(() => engine)
+      getPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
@@ -99,7 +99,7 @@ describe('LyricsAnnotationStore — detection gating', () => {
     const map = read<Record<number, any>>(store.annotationByIndex$);
     expect(map[0]).toEqual({ text: 'ありがとう', annotation: 'arigatō', status: 'done' });
     // The engine was built from the romaji config's prompts.
-    expect(ai.createPromptEngine.mock.calls[0][0].systemPrompt).toContain('Hepburn');
+    expect(ai.getPromptEngine.mock.calls[0][0].systemPrompt).toContain('Hepburn');
     expect(read<string | null>(store.pageStatusText$)).toBeNull();
   });
 
@@ -111,7 +111,7 @@ describe('LyricsAnnotationStore — detection gating', () => {
     expect(ai.checkAvailability).toHaveBeenCalledWith(['ja', 'en']);
     expect(read<boolean>(store.showToggle$)).toBe(false);
     expect(read<string | null>(store.pageStatusText$)).toBeNull();
-    expect(ai.createPromptEngine).not.toHaveBeenCalled();
+    expect(ai.getPromptEngine).not.toHaveBeenCalled();
   });
 
   it('stays silent for a detected language with no registered annotator', async () => {
@@ -131,7 +131,7 @@ describe('LyricsAnnotationStore — detection gating', () => {
     await flush();
     expect(read<string | null>(store.pageStatusText$)).toBeNull();
     expect(read<boolean>(store.showToggle$)).toBe(false);
-    expect(ai.createPromptEngine).not.toHaveBeenCalled();
+    expect(ai.getPromptEngine).not.toHaveBeenCalled();
   });
 
   it('reports the romaji preparing label for a Japanese song', async () => {
@@ -150,7 +150,7 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPromptEngine: jest.Mock;
+    getPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
   let isSynced$: BehaviorSubject<boolean>;
@@ -177,7 +177,7 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPromptEngine: jest.fn(() => engine)
+      getPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
@@ -192,7 +192,7 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     await flush();
   });
 
-  it('createPromptEngine is called once even with multiple drains', async () => {
+  it('getPromptEngine is called once even with multiple drains', async () => {
     engine.annotateBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
     store.setActiveLine(0);
     await flush();
@@ -200,7 +200,7 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     store.setActiveLine(5);
     await flush();
     await flush();
-    expect(ai.createPromptEngine).toHaveBeenCalledTimes(1);
+    expect(ai.getPromptEngine).toHaveBeenCalledTimes(1);
   });
 
   it('only one annotateBatch in flight at a time (serial drain)', async () => {
@@ -349,7 +349,7 @@ describe('LyricsAnnotationStore — track change', () => {
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPromptEngine: jest.fn(() => engine)
+      getPromptEngine: jest.fn(() => engine)
     };
     TestBed.configureTestingModule({
       providers: [
@@ -446,7 +446,7 @@ describe('LyricsAnnotationStore — track change', () => {
       annotateBatch: jest.fn((b: string[]) => Promise.resolve(b.map(() => 'rōmaji'))),
       destroy: jest.fn()
     };
-    ai.createPromptEngine.mockReturnValueOnce(engineA).mockReturnValueOnce(engineB);
+    ai.getPromptEngine.mockReturnValueOnce(engineA).mockReturnValueOnce(engineB);
 
     lyrics$.next(lines(3, 'a'));            // zh track
     await flush();
@@ -477,7 +477,7 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
-    createPromptEngine: jest.Mock;
+    getPromptEngine: jest.Mock;
   };
   let lyrics$: BehaviorSubject<LyricLine[] | null>;
   let isSynced$: BehaviorSubject<boolean>;
@@ -513,7 +513,7 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
-      createPromptEngine: jest.fn(() => engine)
+      getPromptEngine: jest.fn(() => engine)
     };
   });
 

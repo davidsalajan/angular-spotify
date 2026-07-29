@@ -21,6 +21,8 @@ export interface CreateSessionOptions {
 
 /** What a prompt-based annotator needs from the Prompt API. */
 export interface PromptEngineSpec {
+  /** Annotator id — cache key; one base session lives per id. */
+  id: string;
   systemPrompt: string;
   batchInstruction: string;
 }

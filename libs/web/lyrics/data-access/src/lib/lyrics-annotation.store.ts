@@ -196,7 +196,8 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
       // 'prompt' is the only engine today; a future 'translator' kind adds a
       // case here without touching the drain machinery.
       case 'prompt':
-        return this.ai.createPromptEngine({
+        return this.ai.getPromptEngine({
+          id: config.id,
           systemPrompt: config.systemPrompt,
           batchInstruction: config.batchInstruction
         });
