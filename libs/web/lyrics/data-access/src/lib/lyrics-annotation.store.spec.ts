@@ -327,6 +327,84 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
   });
 });
 
+describe('LyricsAnnotationStore — warm-up/drain shared session creation', () => {
+  let store: LyricsAnnotationStore;
+  let ai: {
+    isPromptApiAvailable: jest.Mock;
+    isDetectorAvailable: jest.Mock;
+    checkAvailability: jest.Mock;
+    detectLanguage: jest.Mock;
+    getPromptEngine: jest.Mock;
+  };
+  let lyrics$: BehaviorSubject<LyricLine[] | null>;
+
+  beforeEach(() => {
+    lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
+    ai = {
+      isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isDetectorAvailable: jest.fn().mockReturnValue(true),
+      checkAvailability: jest.fn().mockResolvedValue('available'),
+      detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
+      getPromptEngine: jest.fn()
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        LyricsAnnotationStore,
+        { provide: BuiltInAiService, useValue: ai },
+        { provide: LyricsStore, useValue: { lyrics$, isSynced$: of(true), activeLine$: of(-1) } }
+      ]
+    });
+    store = TestBed.inject(LyricsAnnotationStore);
+  });
+
+  it('shares one session creation between the warm-up and drainQueue when they race on the same generation', async () => {
+    // Emulates the service's real memoization (Task 3): every call while a
+    // creation is in flight returns the SAME pending promise; `creations`
+    // counts how many times a new one was actually started.
+    let resolveReady!: () => void;
+    let creations = 0;
+    let readyPromise: Promise<void> | null = null;
+    const engine = {
+      ensureReady: jest.fn(() => {
+        if (!readyPromise) {
+          creations++;
+          readyPromise = new Promise<void>((r) => (resolveReady = r));
+        }
+        return readyPromise;
+      }),
+      annotateBatch: jest.fn((b: string[]) => Promise.resolve(b.map(() => 'pīn yīn'))),
+      destroy: jest.fn()
+    };
+    ai.getPromptEngine.mockReturnValue(engine);
+
+    store.init([{ time: 0, text: '你好' }]);
+    // Let detectAndSeed resolve detectLanguage + checkAvailability and reach
+    // the warm-up's ensureReady call — flush() (a macrotask boundary) drains
+    // every pending microtask first, so this lands exactly on "called once,
+    // not yet resolved" without hand-counting Promise.resolve() ticks.
+    await flush();
+    expect(engine.ensureReady).toHaveBeenCalledTimes(1);
+
+    // drainQueue's prepareEngine call races the warm-up's: this.engine is
+    // still null, so it calls ensureReady too — but gets the same pending
+    // promise back rather than starting a second creation.
+    store.setActiveLine(0);
+    await flush();
+    expect(engine.ensureReady).toHaveBeenCalledTimes(2);
+    expect(creations).toBe(1);
+
+    resolveReady();
+    await flush();
+    await flush();
+
+    expect(creations).toBe(1); // both paths shared one LanguageModel.create()
+    expect(engine.annotateBatch).toHaveBeenCalled(); // drain proceeded once ready
+    let state!: string;
+    store.downloadState$.pipe(take(1)).subscribe((s) => (state = s));
+    expect(state).toBe('ready');
+  });
+});
+
 describe('LyricsAnnotationStore — track change', () => {
   let store: LyricsAnnotationStore;
   let engine: any;
@@ -435,9 +513,19 @@ describe('LyricsAnnotationStore — track change', () => {
   });
 
   it('does not adopt (or destroy) an engine whose preparation finishes after a track change', async () => {
+    // ensureReady must emulate the service's real memoization: the warm-up
+    // and drainQueue both race on this.engine === null and each call
+    // ensureReady, but they need to observe the SAME pending promise (one
+    // creation), not two independent ones that only the second overwrites.
     let resolveReady!: () => void;
+    let readyPromiseA: Promise<void> | null = null;
     const engineA = {
-      ensureReady: jest.fn(() => new Promise<void>((r) => { resolveReady = r; })),
+      ensureReady: jest.fn(() => {
+        if (!readyPromiseA) {
+          readyPromiseA = new Promise<void>((r) => (resolveReady = r));
+        }
+        return readyPromiseA;
+      }),
       annotateBatch: jest.fn(),
       destroy: jest.fn()
     };
