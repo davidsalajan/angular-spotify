@@ -42,7 +42,7 @@ describe('BuiltInAiService — detection', () => {
     expect(await service.detectLanguage('你好')).toBeNull();
   });
 
-  it('detectLanguage returns null when detection throws', async () => {
+  it('detectLanguage returns null when detector creation throws', async () => {
     (globalThis as any).LanguageDetector = {
       create: jest.fn().mockRejectedValue(new Error('boom'))
     };
@@ -69,6 +69,19 @@ describe('BuiltInAiService — detection', () => {
     expect(await service.detectLanguage('你好')).toBeNull();
     expect(await service.detectLanguage('你好')).toEqual({ lang: 'zh', confidence: 0.9 });
     expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('detectLanguage keeps the cached detector when detect() fails', async () => {
+    const detect = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValue([{ detectedLanguage: 'zh', confidence: 0.9 }]);
+    const create = jest.fn().mockResolvedValue({ detect });
+    (globalThis as any).LanguageDetector = { create };
+    expect(await service.detectLanguage('你好')).toBeNull();
+    expect(await service.detectLanguage('再见')).toEqual({ lang: 'zh', confidence: 0.9 });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(detect).toHaveBeenCalledTimes(2);
   });
 });
 

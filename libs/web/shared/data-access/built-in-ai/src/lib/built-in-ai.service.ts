@@ -37,18 +37,23 @@ export class BuiltInAiService {
     if (!this.isDetectorAvailable()) {
       return null;
     }
+    const t0 = performance.now();
+    let detector: DetectorInstance;
     try {
-      const t0 = performance.now();
       if (!this.detector) {
         this.detector = globalThis.LanguageDetector!.create();
       }
-      const detector = await this.detector;
+      detector = await this.detector;
+    } catch {
+      this.detector = null;
+      return null;
+    }
+    try {
       const results = await detector.detect(text);
       console.log(`[BuiltInAI] detectLanguage: ${(performance.now() - t0).toFixed(1)}ms`);
       const top = results[0];
       return top ? { lang: top.detectedLanguage, confidence: top.confidence } : null;
     } catch {
-      this.detector = null;
       return null;
     }
   }
