@@ -140,6 +140,14 @@ describe('LyricsAnnotationStore — detection gating', () => {
     await flush();
     expect(read<string | null>(store.pageStatusText$)).toBe('Preparing romaji…');
   });
+
+  it('warms the session as soon as the annotator is matched, before any drain', async () => {
+    store.init([{ time: 0, text: '你好' }]);
+    await flush();
+    expect(ai.getPromptEngine).toHaveBeenCalledWith(expect.objectContaining({ id: 'pinyin' }));
+    expect(engine.ensureReady).toHaveBeenCalled();
+    expect(engine.annotateBatch).not.toHaveBeenCalled();
+  });
 });
 
 describe('LyricsAnnotationStore — windowing, queue, cache', () => {
@@ -192,7 +200,7 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     await flush();
   });
 
-  it('getPromptEngine is called once even with multiple drains', async () => {
+  it('every engine acquisition uses the annotator id, so the service cache dedupes', async () => {
     engine.annotateBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
     store.setActiveLine(0);
     await flush();
@@ -200,7 +208,8 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     store.setActiveLine(5);
     await flush();
     await flush();
-    expect(ai.getPromptEngine).toHaveBeenCalledTimes(1);
+    expect(ai.getPromptEngine.mock.calls.length).toBeGreaterThan(0);
+    expect(ai.getPromptEngine.mock.calls.every((c: any[]) => c[0].id === 'pinyin')).toBe(true);
   });
 
   it('only one annotateBatch in flight at a time (serial drain)', async () => {
@@ -304,19 +313,13 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
   });
 
   it('passes onDownloadProgress to ensureReady and progress callback flips downloadState to downloading', async () => {
-    let capturedOpts: { onDownloadProgress?: () => void } | undefined;
-    engine.ensureReady.mockImplementationOnce((opts: { onDownloadProgress?: () => void }) => {
-      capturedOpts = opts;
-      return Promise.resolve();
-    });
-    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
-    store.setActiveLine(0);
-    await flush();
-    await flush();
-    expect(capturedOpts).toBeDefined();
+    // Warm-up in beforeEach's init() already called ensureReady — inspect that call.
+    const capturedOpts = engine.ensureReady.mock.calls[0]?.[0] as
+      | { onDownloadProgress?: () => void }
+      | undefined;
     expect(typeof capturedOpts?.onDownloadProgress).toBe('function');
-    // After drain completes, downloadState is 'ready'.
-    // Invoking the progress callback should flip it back to 'downloading'.
+    // downloadState is 'ready' after the warm-up completed; invoking the
+    // progress callback should flip it back to 'downloading'.
     capturedOpts?.onDownloadProgress?.();
     let state!: string;
     store.downloadState$.pipe(take(1)).subscribe((s) => (state = s));
@@ -361,7 +364,7 @@ describe('LyricsAnnotationStore — track change', () => {
     store = TestBed.inject(LyricsAnnotationStore);
   });
 
-  it('resets state and destroys the engine when the track changes', async () => {
+  it('resets state but keeps the base session alive when the track changes', async () => {
     lyrics$.next(lines(10, 'a'));
     await flush();
     store.setActiveLine(0);
@@ -370,7 +373,7 @@ describe('LyricsAnnotationStore — track change', () => {
 
     lyrics$.next(lines(10, 'b'));
     await flush();
-    expect(engine.destroy).toHaveBeenCalled();
+    expect(engine.destroy).not.toHaveBeenCalled();
     const map = read<Record<number, any>>(store.annotationByIndex$);
     expect(map[0].status).toBe('pending'); // fresh seed for new track
     expect(map[0].text).toBe('b0汉');
@@ -423,9 +426,6 @@ describe('LyricsAnnotationStore — track change', () => {
     await flush();
     await flush();
 
-    // The old engine's destroy must have been called
-    expect(engine.destroy).toHaveBeenCalled();
-
     // New track's annotationByIndex must only contain 'b' lines — no stale 'a' data
     const map = read<Record<number, any>>(store.annotationByIndex$);
     const entries = Object.values(map) as Array<{ text: string; status: string; annotation: string | null }>;
@@ -434,7 +434,7 @@ describe('LyricsAnnotationStore — track change', () => {
     expect(entries.every((e) => e.annotation !== 'stale-py')).toBe(true);
   });
 
-  it('destroys an engine whose preparation finishes after a track change instead of adopting it', async () => {
+  it('does not adopt (or destroy) an engine whose preparation finishes after a track change', async () => {
     let resolveReady!: () => void;
     const engineA = {
       ensureReady: jest.fn(() => new Promise<void>((r) => { resolveReady = r; })),
@@ -446,26 +446,28 @@ describe('LyricsAnnotationStore — track change', () => {
       annotateBatch: jest.fn((b: string[]) => Promise.resolve(b.map(() => 'rōmaji'))),
       destroy: jest.fn()
     };
-    ai.getPromptEngine.mockReturnValueOnce(engineA).mockReturnValueOnce(engineB);
+    ai.getPromptEngine.mockImplementation((spec: { id: string }) =>
+      spec.id === 'romaji' ? engineB : engineA
+    );
 
-    lyrics$.next(lines(3, 'a'));            // zh track
+    lyrics$.next(lines(3, 'a'));            // zh track; warm-up starts, engineA pending
     await flush();
-    store.setActiveLine(0);                  // drain starts; engineA.ensureReady pending
+    store.setActiveLine(0);                  // drain also waits on engineA
     await flush();
 
     ai.detectLanguage.mockResolvedValueOnce({ lang: 'ja', confidence: 0.9 });
     lyrics$.next([{ time: 0, text: 'ありがとう' }]);  // ja track before engineA is ready
     await flush();
 
-    resolveReady();                          // stale zh engine finishes preparing late
+    resolveReady();                          // stale zh preparation finishes late
     await flush();
     store.setActiveLine(0);
     await flush();
     await flush();
 
-    expect(engineA.destroy).toHaveBeenCalled();      // orphan destroyed, never adopted
-    expect(engineB.annotateBatch).toHaveBeenCalled(); // ja track got its own engine
+    expect(engineA.destroy).not.toHaveBeenCalled();   // base session survives for the next zh track
     expect(engineA.annotateBatch).not.toHaveBeenCalled();
+    expect(engineB.annotateBatch).toHaveBeenCalled();  // ja track uses its own engine
   });
 });
 
