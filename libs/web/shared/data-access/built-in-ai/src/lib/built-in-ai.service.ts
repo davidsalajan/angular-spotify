@@ -4,12 +4,16 @@ import {
   AnnotationEngine,
   AnnotationSession,
   CreateSessionOptions,
+  DetectorInstance,
   LanguageDetectionResult,
   PromptEngineSpec
 } from './built-in-ai.types';
 
 @Injectable({ providedIn: 'root' })
 export class BuiltInAiService {
+  /** One detector for the app's lifetime; cleared on failure so the next call retries. */
+  private detector: Promise<DetectorInstance> | null = null;
+
   isPromptApiAvailable(): boolean {
     return typeof globalThis.LanguageModel !== 'undefined';
   }
@@ -35,12 +39,16 @@ export class BuiltInAiService {
     }
     try {
       const t0 = performance.now();
-      const detector = await globalThis.LanguageDetector!.create();
+      if (!this.detector) {
+        this.detector = globalThis.LanguageDetector!.create();
+      }
+      const detector = await this.detector;
       const results = await detector.detect(text);
       console.log(`[BuiltInAI] detectLanguage: ${(performance.now() - t0).toFixed(1)}ms`);
       const top = results[0];
       return top ? { lang: top.detectedLanguage, confidence: top.confidence } : null;
     } catch {
+      this.detector = null;
       return null;
     }
   }

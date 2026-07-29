@@ -48,6 +48,28 @@ describe('BuiltInAiService — detection', () => {
     };
     expect(await service.detectLanguage('你好')).toBeNull();
   });
+
+  it('detectLanguage reuses one detector across calls', async () => {
+    const detect = jest.fn().mockResolvedValue([{ detectedLanguage: 'zh', confidence: 0.9 }]);
+    const create = jest.fn().mockResolvedValue({ detect });
+    (globalThis as any).LanguageDetector = { create };
+    await service.detectLanguage('你好');
+    await service.detectLanguage('再见');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(detect).toHaveBeenCalledTimes(2);
+  });
+
+  it('detectLanguage retries detector creation after a failure', async () => {
+    const detect = jest.fn().mockResolvedValue([{ detectedLanguage: 'zh', confidence: 0.9 }]);
+    const create = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue({ detect });
+    (globalThis as any).LanguageDetector = { create };
+    expect(await service.detectLanguage('你好')).toBeNull();
+    expect(await service.detectLanguage('你好')).toEqual({ lang: 'zh', confidence: 0.9 });
+    expect(create).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('BuiltInAiService — generic annotation API', () => {

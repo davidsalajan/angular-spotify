@@ -5,6 +5,10 @@ export interface LanguageDetectionResult {
   confidence: number;
 }
 
+export interface DetectorInstance {
+  detect(text: string): Promise<{ detectedLanguage: string; confidence: number }[]>;
+}
+
 export interface AnnotationSession {
   prompt(input: string, opts?: { signal?: AbortSignal }): Promise<string>;
   destroy(): void;
@@ -55,11 +59,7 @@ declare global {
   var LanguageDetector:
     | {
         availability(): Promise<AiAvailability>;
-        create(): Promise<{
-          detect(
-            text: string
-          ): Promise<{ detectedLanguage: string; confidence: number }[]>;
-        }>;
+        create(): Promise<DetectorInstance>;
       }
     | undefined;
 }
