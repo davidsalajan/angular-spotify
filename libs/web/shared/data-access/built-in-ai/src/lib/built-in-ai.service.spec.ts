@@ -96,7 +96,72 @@ describe('BuiltInAiService — generic annotation API', () => {
 
   const fakeSession = (output: string): AnnotationSession => ({
     prompt: jest.fn().mockResolvedValue(output),
+    clone: jest.fn(),
     destroy: jest.fn()
+  });
+
+  const fakeCloneableSession = (output: string) => {
+    const clone = {
+      prompt: jest.fn().mockResolvedValue(output),
+      destroy: jest.fn(),
+      clone: jest.fn()
+    };
+    const base = {
+      prompt: jest.fn(),
+      destroy: jest.fn(),
+      clone: jest.fn().mockResolvedValue(clone)
+    };
+    return { base, clone };
+  };
+
+  it('concurrent ensureReady calls share a single session creation', async () => {
+    const { base } = fakeCloneableSession('[]');
+    let resolveCreate!: (s: unknown) => void;
+    const create = jest.fn().mockReturnValue(new Promise((r) => (resolveCreate = r)));
+    (globalThis as any).LanguageModel = { create };
+    const engine = service.getPromptEngine({ id: 't-conc', systemPrompt: 'S', batchInstruction: 'I' });
+    const first = engine.ensureReady();
+    const second = engine.ensureReady();
+    resolveCreate(base);
+    await Promise.all([first, second]);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed session creation is retried by the next ensureReady', async () => {
+    const { base } = fakeCloneableSession('[]');
+    const create = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue(base);
+    (globalThis as any).LanguageModel = { create };
+    const engine = service.getPromptEngine({ id: 't-retry', systemPrompt: 'S', batchInstruction: 'I' });
+    await expect(engine.ensureReady()).rejects.toThrow('boom');
+    await engine.ensureReady();
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('annotateBatch prompts a clone and destroys it, never the base session', async () => {
+    const { base, clone } = fakeCloneableSession('["nǐ hǎo"]');
+    (globalThis as any).LanguageModel = { create: jest.fn().mockResolvedValue(base) };
+    const engine = service.getPromptEngine({ id: 't-clone', systemPrompt: 'S', batchInstruction: 'I' });
+    await engine.ensureReady();
+    const result = await engine.annotateBatch(['你好']);
+    expect(result).toEqual(['nǐ hǎo']);
+    expect(base.clone).toHaveBeenCalled();
+    expect((clone.prompt as jest.Mock).mock.calls[0][0]).toBe('I\n\n你好');
+    expect(base.prompt).not.toHaveBeenCalled();
+    expect(clone.destroy).toHaveBeenCalled();
+    expect(base.destroy).not.toHaveBeenCalled();
+  });
+
+  it('annotateBatch destroys the clone even when the prompt fails', async () => {
+    const { base, clone } = fakeCloneableSession('[]');
+    (clone.prompt as jest.Mock).mockRejectedValue(new Error('AI error'));
+    (globalThis as any).LanguageModel = { create: jest.fn().mockResolvedValue(base) };
+    const engine = service.getPromptEngine({ id: 't-cfail', systemPrompt: 'S', batchInstruction: 'I' });
+    await engine.ensureReady();
+    await expect(engine.annotateBatch(['你好'])).rejects.toThrow('AI error');
+    expect(clone.destroy).toHaveBeenCalled();
   });
 
   it('checkAvailability returns unavailable when the global is missing', async () => {
@@ -142,30 +207,26 @@ describe('BuiltInAiService — generic annotation API', () => {
   });
 
   it('getPromptEngine creates the session once across ensureReady calls and prompts with the spec', async () => {
-    const session = fakeSession('["kimi no"]');
-    const create = jest.fn().mockResolvedValue(session);
+    const { base, clone } = fakeCloneableSession('["kimi no"]');
+    const create = jest.fn().mockResolvedValue(base);
     (globalThis as any).LanguageModel = { create };
-    const engine = service.getPromptEngine({
-      id: 't-once',
-      systemPrompt: 'SYS',
-      batchInstruction: 'INSTR'
-    });
+    const engine = service.getPromptEngine({ id: 't-once', systemPrompt: 'SYS', batchInstruction: 'INSTR' });
     await engine.ensureReady();
     await engine.ensureReady();
     expect(create).toHaveBeenCalledTimes(1);
     const result = await engine.annotateBatch(['君の']);
     expect(result).toEqual(['kimi no']);
-    expect((session.prompt as jest.Mock).mock.calls[0][0]).toBe('INSTR\n\n君の');
+    expect((clone.prompt as jest.Mock).mock.calls[0][0]).toBe('INSTR\n\n君の');
   });
 
   it('getPromptEngine.destroy destroys the session and allows a fresh one', async () => {
-    const session = fakeSession('[]');
-    const create = jest.fn().mockResolvedValue(session);
+    const { base } = fakeCloneableSession('[]');
+    const create = jest.fn().mockResolvedValue(base);
     (globalThis as any).LanguageModel = { create };
     const engine = service.getPromptEngine({ id: 't-destroy', systemPrompt: 'SYS', batchInstruction: 'I' });
     await engine.ensureReady();
     engine.destroy();
-    expect(session.destroy).toHaveBeenCalled();
+    expect(base.destroy).toHaveBeenCalled();
     await engine.ensureReady();
     expect(create).toHaveBeenCalledTimes(2);
   });

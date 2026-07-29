@@ -112,21 +112,45 @@ export class BuiltInAiService {
 
   private buildPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
     let session: AnnotationSession | null = null;
+    let creating: Promise<void> | null = null;
     return {
-      ensureReady: async (opts: CreateSessionOptions = {}) => {
-        if (!session) {
-          session = await this.createSession(spec.systemPrompt, opts);
+      // Memoizes the in-flight creation: the detectAndSeed warm-up and the
+      // first drain both land here and share one LanguageModel.create().
+      ensureReady: (opts: CreateSessionOptions = {}) => {
+        if (session) {
+          return Promise.resolve();
         }
+        if (!creating) {
+          creating = this.createSession(spec.systemPrompt, opts).then(
+            (s) => {
+              session = s;
+              creating = null;
+            },
+            (err) => {
+              creating = null;
+              throw err;
+            }
+          );
+        }
+        return creating;
       },
-      annotateBatch: (lines: string[], signal?: AbortSignal) => {
+      // Each batch runs on a throwaway clone so the base session keeps only
+      // the system prompt — batches never accumulate as context.
+      annotateBatch: async (lines: string[], signal?: AbortSignal) => {
         if (!session) {
-          return Promise.reject(new Error('Annotation engine not ready'));
+          throw new Error('Annotation engine not ready');
         }
-        return this.promptBatch(session, spec.batchInstruction, lines, signal);
+        const clone = await session.clone({ signal });
+        try {
+          return await this.promptBatch(clone, spec.batchInstruction, lines, signal);
+        } finally {
+          clone.destroy();
+        }
       },
       destroy: () => {
         session?.destroy();
         session = null;
+        creating = null;
       }
     };
   }

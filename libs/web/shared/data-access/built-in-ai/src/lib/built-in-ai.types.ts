@@ -11,6 +11,7 @@ export interface DetectorInstance {
 
 export interface AnnotationSession {
   prompt(input: string, opts?: { signal?: AbortSignal }): Promise<string>;
+  clone(opts?: { signal?: AbortSignal }): Promise<AnnotationSession>;
   destroy(): void;
 }
 
@@ -29,7 +30,7 @@ export interface PromptEngineSpec {
 
 /**
  * A prepared annotation backend for one song. Today only the Prompt API
- * implementation exists (createPromptEngine); a Translator-API engine for
+ * implementation exists (getPromptEngine); a Translator-API engine for
  * translation pairs implements the same interface later.
  */
 export interface AnnotationEngine {
