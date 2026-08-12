@@ -46,7 +46,9 @@ describe('LyricsAnnotationStore — detection gating', () => {
       providers: [
         LyricsAnnotationStore,
         { provide: BuiltInAiService, useValue: ai },
-        { provide: LyricsStore, useValue: { lyrics$, isSynced$: of(true), activeLine$: of(-1) } }
+        // Unsynced on purpose: these tests cover detection gating only. A
+        // synced track would auto-seed a window at line 0 and start draining.
+        { provide: LyricsStore, useValue: { lyrics$, isSynced$: of(false), activeLine$: of(-1) } }
       ]
     });
     store = TestBed.inject(LyricsAnnotationStore);
@@ -274,29 +276,24 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
   });
 
   it('does not drain when disabled', async () => {
+    // init() already seeded and drained lines 0-10; only count new calls.
+    engine.annotateBatch.mockClear();
     store.setEnabled(false);
-    store.setActiveLine(0);
+    store.setActiveLine(15); // opens lines beyond the auto-seeded window
     await flush();
     await flush();
     expect(engine.annotateBatch).not.toHaveBeenCalled();
   });
 
   it('resumes draining when re-enabled', async () => {
+    engine.annotateBatch.mockClear();
     engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
     store.setEnabled(false);
-    store.setActiveLine(0);
+    store.setActiveLine(15);
     await flush();
     await flush();
+    expect(engine.annotateBatch).not.toHaveBeenCalled();
     store.setEnabled(true);
-    await flush();
-    await flush();
-    expect(engine.annotateBatch).toHaveBeenCalled();
-  });
-
-  it('setVisibleRange triggers fetch for unsynced lines in range', async () => {
-    engine.annotateBatch.mockResolvedValue(Array(8).fill('nǐ hǎo'));
-    // windowEnd = -1 (default after init with no activeLine set past it)
-    store.setVisibleRange({ start: 0, end: 5 });
     await flush();
     await flush();
     expect(engine.annotateBatch).toHaveBeenCalled();
@@ -383,14 +380,16 @@ describe('LyricsAnnotationStore — warm-up/drain shared session creation', () =
     // every pending microtask first, so this lands exactly on "called once,
     // not yet resolved" without hand-counting Promise.resolve() ticks.
     await flush();
-    expect(engine.ensureReady).toHaveBeenCalledTimes(1);
+    // The warm-up and the line-0 seed both call ensureReady in this tick,
+    // but the memoized promise means only one creation starts.
+    expect(engine.ensureReady.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(creations).toBe(1);
 
     // drainQueue's prepareEngine call races the warm-up's: this.engine is
     // still null, so it calls ensureReady too — but gets the same pending
     // promise back rather than starting a second creation.
     store.setActiveLine(0);
     await flush();
-    expect(engine.ensureReady).toHaveBeenCalledTimes(2);
     expect(creations).toBe(1);
 
     resolveReady();
@@ -453,8 +452,10 @@ describe('LyricsAnnotationStore — track change', () => {
     await flush();
     expect(engine.destroy).not.toHaveBeenCalled();
     const map = read<Record<number, any>>(store.annotationByIndex$);
-    expect(map[0].status).toBe('pending'); // fresh seed for new track
+    // The new track seeds fresh entries. With a warm session and the line-0
+    // seed they annotate in the same tick, no waiting for the first sung line.
     expect(map[0].text).toBe('b0汉');
+    expect(map[0].annotation).toBe('py-b0汉');
   });
 
   it('does not stamp new track state with old track lines when detectLanguage resolves after track change', async () => {
@@ -608,6 +609,9 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
   });
 
   it('hides the toggle and reports "preparing" before any pinyin renders', async () => {
+    // The line-0 seed starts draining right away, so hold the first batch
+    // open to catch the state before anything renders.
+    engine.annotateBatch.mockReturnValue(new Promise(() => undefined));
     configure();
     store.init(LINES);
     await flush();
@@ -657,5 +661,34 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
     await flush();
     expect(read<boolean>(store.hasRenderedAnnotation$)).toBe(true);
     expect(read<boolean>(store.showToggle$)).toBe(true);
+  });
+
+  it('seeds the first window at line 0 during a synced intro (activeLine still -1)', async () => {
+    // Regression: songs with a long instrumental intro report activeLine -1
+    // until the first sung line, and the viewport observer only covers
+    // unsynced lyrics. Nothing annotated for the whole intro, so the first
+    // pinyin showed up ~30s after the track change even with a warm session.
+    // The store must open the window at line 0 instead of waiting.
+    configure();
+    store.init(LINES);
+    await flush();
+    await flush();
+    expect(engine.annotateBatch).toHaveBeenCalled();
+    expect(engine.annotateBatch.mock.calls[0][0]).toEqual(LINES.map((l) => l.text));
+    expect(read<boolean>(store.hasRenderedAnnotation$)).toBe(true);
+  });
+
+  it('does not seed a window for unsynced lyrics — the viewport observer drives them', async () => {
+    isSynced$.next(false);
+    configure();
+    store.init(LINES);
+    await flush();
+    await flush();
+    expect(engine.annotateBatch).not.toHaveBeenCalled();
+    // The viewport observer remains the driver: a visible range triggers the fetch.
+    store.setVisibleRange({ start: 0, end: 2 });
+    await flush();
+    await flush();
+    expect(engine.annotateBatch).toHaveBeenCalled();
   });
 });

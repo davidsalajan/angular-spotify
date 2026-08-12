@@ -150,14 +150,22 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
     // Warm the session now — annotator matched, availability confirmed, lines
     // qualify — so the model spins up in parallel with the window seeding below.
     void this.prepareEngine(gen, config).catch(() => undefined);
-    // A paused song doesn't advance activeLine$, and detection may resolve after
-    // the last activeLine emission — so the active-line driver would never open a
-    // window and annotations would never generate. Seed one now around the current
-    // active line so visible annotations appear immediately. (Unsynced lyrics report
-    // activeLine -1 and are driven by the viewport observer instead.)
-    this.lyricsStore.activeLine$.pipe(take(1)).subscribe((activeLine) => {
-      if (activeLine >= 0) this.setActiveLine(activeLine);
-    });
+    // Nothing else opens the first window in two common cases:
+    // - a paused song: activeLine$ already emitted, so the active-line driver
+    //   will not fire again until playback moves
+    // - an instrumental intro: activeLine stays -1 until the first sung line,
+    //   and the viewport observer only covers unsynced lyrics
+    // Seed it ourselves. Use the active line when there is one, otherwise
+    // start at line 0 so the lyrics annotate while the intro is still playing.
+    combineLatest([this.lyricsStore.isSynced$, this.lyricsStore.activeLine$])
+      .pipe(take(1))
+      .subscribe(([isSynced, activeLine]) => {
+        if (activeLine >= 0) {
+          this.setActiveLine(activeLine);
+        } else if (isSynced) {
+          this.setActiveLine(0);
+        }
+      });
   }
 
   private get focus(): number {
