@@ -4,12 +4,19 @@ import {
   AnnotationEngine,
   AnnotationSession,
   CreateSessionOptions,
+  DetectorInstance,
   LanguageDetectionResult,
   PromptEngineSpec
 } from './built-in-ai.types';
 
 @Injectable({ providedIn: 'root' })
 export class BuiltInAiService {
+  /** One detector for the app's lifetime; cleared on failure so the next call retries. */
+  private detector: Promise<DetectorInstance> | null = null;
+
+  /** One engine (and base session) per annotator id, kept for the app's lifetime. */
+  private engines = new Map<string, AnnotationEngine>();
+
   isPromptApiAvailable(): boolean {
     return typeof globalThis.LanguageModel !== 'undefined';
   }
@@ -33,9 +40,18 @@ export class BuiltInAiService {
     if (!this.isDetectorAvailable()) {
       return null;
     }
+    const t0 = performance.now();
+    let detector: DetectorInstance;
     try {
-      const t0 = performance.now();
-      const detector = await globalThis.LanguageDetector!.create();
+      if (!this.detector) {
+        this.detector = globalThis.LanguageDetector!.create();
+      }
+      detector = await this.detector;
+    } catch {
+      this.detector = null;
+      return null;
+    }
+    try {
       const results = await detector.detect(text);
       console.log(`[BuiltInAI] detectLanguage: ${(performance.now() - t0).toFixed(1)}ms`);
       const top = results[0];
@@ -81,27 +97,69 @@ export class BuiltInAiService {
   }
 
   /**
-   * A lazily-prepared Prompt API engine bound to one annotator's prompts.
-   * ensureReady is idempotent; destroy releases the session (a new ensureReady
-   * recreates it).
+   * The Prompt API engine for one annotator. Cached by spec.id: the base
+   * session survives track changes, so the second song in the same language
+   * starts warm.
    */
-  createPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
+  getPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
+    let engine = this.engines.get(spec.id);
+    if (!engine) {
+      engine = this.buildPromptEngine(spec);
+      this.engines.set(spec.id, engine);
+    }
+    return engine;
+  }
+
+  private buildPromptEngine(spec: PromptEngineSpec): AnnotationEngine {
     let session: AnnotationSession | null = null;
+    let creating: Promise<void> | null = null;
+    let epoch = 0;
     return {
-      ensureReady: async (opts: CreateSessionOptions = {}) => {
-        if (!session) {
-          session = await this.createSession(spec.systemPrompt, opts);
+      // Memoizes the in-flight creation: the detectAndSeed warm-up and the
+      // first drain both land here and share one LanguageModel.create().
+      ensureReady: (opts: CreateSessionOptions = {}) => {
+        if (session) {
+          return Promise.resolve();
         }
+        if (!creating) {
+          const started = epoch;
+          creating = this.createSession(spec.systemPrompt, opts).then(
+            (s) => {
+              if (started !== epoch) {
+                s.destroy(); // destroy() superseded this creation — don't adopt, don't leak
+                return;
+              }
+              session = s;
+              creating = null;
+            },
+            (err) => {
+              if (started === epoch) {
+                creating = null;
+              }
+              throw err;
+            }
+          );
+        }
+        return creating;
       },
-      annotateBatch: (lines: string[], signal?: AbortSignal) => {
+      // Each batch runs on a throwaway clone so the base session keeps only
+      // the system prompt — batches never accumulate as context.
+      annotateBatch: async (lines: string[], signal?: AbortSignal) => {
         if (!session) {
-          return Promise.reject(new Error('Annotation engine not ready'));
+          throw new Error('Annotation engine not ready');
         }
-        return this.promptBatch(session, spec.batchInstruction, lines, signal);
+        const clone = await session.clone({ signal });
+        try {
+          return await this.promptBatch(clone, spec.batchInstruction, lines, signal);
+        } finally {
+          clone.destroy();
+        }
       },
       destroy: () => {
+        epoch++;
         session?.destroy();
         session = null;
+        creating = null;
       }
     };
   }

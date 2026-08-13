@@ -147,14 +147,25 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
       return;
     }
     this.patchState({ support: 'supported', activeAnnotatorId: config.id, annotationByIndex });
-    // A paused song doesn't advance activeLine$, and detection may resolve after
-    // the last activeLine emission — so the active-line driver would never open a
-    // window and annotations would never generate. Seed one now around the current
-    // active line so visible annotations appear immediately. (Unsynced lyrics report
-    // activeLine -1 and are driven by the viewport observer instead.)
-    this.lyricsStore.activeLine$.pipe(take(1)).subscribe((activeLine) => {
-      if (activeLine >= 0) this.setActiveLine(activeLine);
-    });
+    // Warm the session now — annotator matched, availability confirmed, lines
+    // qualify — so the model spins up in parallel with the window seeding below.
+    void this.prepareEngine(gen, config).catch(() => undefined);
+    // Nothing else opens the first window in two common cases:
+    // - a paused song: activeLine$ already emitted, so the active-line driver
+    //   will not fire again until playback moves
+    // - an instrumental intro: activeLine stays -1 until the first sung line,
+    //   and the viewport observer only covers unsynced lyrics
+    // Seed it ourselves. Use the active line when there is one, otherwise
+    // start at line 0 so the lyrics annotate while the intro is still playing.
+    combineLatest([this.lyricsStore.isSynced$, this.lyricsStore.activeLine$])
+      .pipe(take(1))
+      .subscribe(([isSynced, activeLine]) => {
+        if (activeLine >= 0) {
+          this.setActiveLine(activeLine);
+        } else if (isSynced) {
+          this.setActiveLine(0);
+        }
+      });
   }
 
   private get focus(): number {
@@ -196,13 +207,40 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
       // 'prompt' is the only engine today; a future 'translator' kind adds a
       // case here without touching the drain machinery.
       case 'prompt':
-        return this.ai.createPromptEngine({
+        return this.ai.getPromptEngine({
+          id: config.id,
           systemPrompt: config.systemPrompt,
           batchInstruction: config.batchInstruction
         });
       default:
         throw new Error(`No annotation engine for kind: ${config.kind as string}`);
     }
+  }
+
+  /**
+   * Acquire and prepare the engine for this generation. Called fire-and-forget
+   * from detectAndSeed (warm-up, per Chrome's "create the session when intent
+   * is clear") and awaited from drainQueue; the service memoizes the in-flight
+   * creation so both share one LanguageModel.create(). Returns false when
+   * reset() fired while preparing — the engine is NOT adopted, but never
+   * destroyed either: base sessions live in the service cache keyed by
+   * annotator id, so a same-language track later starts warm and a
+   * wrong-language track can't receive it by construction.
+   */
+  private async prepareEngine(gen: number, config: AnnotatorConfig): Promise<boolean> {
+    if (!this.engine) {
+      const engine = this.createEngineFor(config);
+      this.patchState({ downloadState: 'downloading' });
+      await engine.ensureReady({
+        onDownloadProgress: () => this.patchState({ downloadState: 'downloading' })
+      });
+      if (gen !== this.generation) {
+        return false;
+      }
+      this.engine = engine;
+      this.patchState({ downloadState: 'ready' });
+    }
+    return gen === this.generation;
   }
 
   private async drainQueue(): Promise<void> {
@@ -213,23 +251,13 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
     this.draining = true;
     const gen = this.generation;
     try {
-      if (!this.engine) {
-        const engine = this.createEngineFor(config);
-        this.patchState({ downloadState: 'downloading' });
-        await engine.ensureReady({
-          onDownloadProgress: () => this.patchState({ downloadState: 'downloading' })
-        });
-        // Guard: if reset() fired while we awaited preparation, this engine belongs
-        // to a dead generation — destroy it rather than adopting it, so a zh→ja
-        // track switch can never reuse a session with the wrong system prompt.
-        if (gen !== this.generation) {
-          engine.destroy();
-          return;
-        }
-        this.engine = engine;
-        this.patchState({ downloadState: 'ready' });
+      if (!(await this.prepareEngine(gen, config))) {
+        return;
       }
       const engine = this.engine;
+      if (!engine) {
+        return;
+      }
       while (this.queue.length > 0) {
         if (!this.get().enabled) break;
         const batch = this.nextBatch();
@@ -281,7 +309,8 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
   }
 
   private reset(): void {
-    this.engine?.destroy();
+    // Drop the reference only — the base session stays cached in
+    // BuiltInAiService so the next same-language track starts warm.
     this.engine = null;
     this.generation++;
     this.draining = false;

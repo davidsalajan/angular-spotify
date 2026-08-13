@@ -5,8 +5,13 @@ export interface LanguageDetectionResult {
   confidence: number;
 }
 
+export interface DetectorInstance {
+  detect(text: string): Promise<{ detectedLanguage: string; confidence: number }[]>;
+}
+
 export interface AnnotationSession {
   prompt(input: string, opts?: { signal?: AbortSignal }): Promise<string>;
+  clone(opts?: { signal?: AbortSignal }): Promise<AnnotationSession>;
   destroy(): void;
 }
 
@@ -17,13 +22,15 @@ export interface CreateSessionOptions {
 
 /** What a prompt-based annotator needs from the Prompt API. */
 export interface PromptEngineSpec {
+  /** Annotator id — cache key; one base session lives per id. */
+  id: string;
   systemPrompt: string;
   batchInstruction: string;
 }
 
 /**
  * A prepared annotation backend for one song. Today only the Prompt API
- * implementation exists (createPromptEngine); a Translator-API engine for
+ * implementation exists (getPromptEngine); a Translator-API engine for
  * translation pairs implements the same interface later.
  */
 export interface AnnotationEngine {
@@ -55,11 +62,7 @@ declare global {
   var LanguageDetector:
     | {
         availability(): Promise<AiAvailability>;
-        create(): Promise<{
-          detect(
-            text: string
-          ): Promise<{ detectedLanguage: string; confidence: number }[]>;
-        }>;
+        create(): Promise<DetectorInstance>;
       }
     | undefined;
 }
