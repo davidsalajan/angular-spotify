@@ -1,7 +1,7 @@
-import { AnnotatorConfig } from '../annotation.models';
+import { PromptAnnotatorConfig } from '../annotation.models';
 import { containsHan } from '../script-util';
 
-export const PINYIN_ANNOTATOR: AnnotatorConfig = {
+export const PINYIN_ANNOTATOR: PromptAnnotatorConfig = {
   id: 'pinyin',
   kind: 'prompt',
   matchesLanguage: (lang) => lang.startsWith('zh'),

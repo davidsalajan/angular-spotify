@@ -291,3 +291,130 @@ describe('BuiltInAiService — generic annotation API', () => {
     expect(c).not.toBe(a);
   });
 });
+
+describe('BuiltInAiService — translator engine', () => {
+  let service: BuiltInAiService;
+  afterEach(() => {
+    (globalThis as any).Translator = undefined;
+  });
+  beforeEach(() => {
+    service = new BuiltInAiService();
+  });
+
+  const SPEC = { id: 'vi-en', sourceLanguage: 'vi', targetLanguage: 'en' };
+
+  const fakeTranslator = () => ({
+    translate: jest.fn((input: string) => Promise.resolve(`en:${input}`)),
+    destroy: jest.fn()
+  });
+
+  it('isTranslatorApiAvailable reflects the global', () => {
+    (globalThis as any).Translator = undefined;
+    expect(service.isTranslatorApiAvailable()).toBe(false);
+    (globalThis as any).Translator = { availability: jest.fn(), create: jest.fn() };
+    expect(service.isTranslatorApiAvailable()).toBe(true);
+  });
+
+  it('checkTranslatorAvailability returns unavailable when the global is missing', async () => {
+    (globalThis as any).Translator = undefined;
+    expect(await service.checkTranslatorAvailability('vi', 'en')).toBe('unavailable');
+  });
+
+  it('checkTranslatorAvailability passes the language pair through', async () => {
+    const availability = jest.fn().mockResolvedValue('available');
+    (globalThis as any).Translator = { availability, create: jest.fn() };
+    expect(await service.checkTranslatorAvailability('vi', 'en')).toBe('available');
+    expect(availability).toHaveBeenCalledWith({ sourceLanguage: 'vi', targetLanguage: 'en' });
+  });
+
+  it('checkTranslatorAvailability returns unavailable when availability throws', async () => {
+    (globalThis as any).Translator = {
+      availability: jest.fn().mockRejectedValue(new Error('boom')),
+      create: jest.fn()
+    };
+    expect(await service.checkTranslatorAvailability('vi', 'en')).toBe('unavailable');
+  });
+
+  it('creates the translator once across ensureReady calls with the spec pair', async () => {
+    const translator = fakeTranslator();
+    const create = jest.fn().mockResolvedValue(translator);
+    (globalThis as any).Translator = { create };
+    const engine = service.getTranslatorEngine(SPEC);
+    await engine.ensureReady();
+    await engine.ensureReady();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toMatchObject({ sourceLanguage: 'vi', targetLanguage: 'en' });
+  });
+
+  it('annotateBatch translates each line in order on the cached translator', async () => {
+    const translator = fakeTranslator();
+    (globalThis as any).Translator = { create: jest.fn().mockResolvedValue(translator) };
+    const engine = service.getTranslatorEngine(SPEC);
+    await engine.ensureReady();
+    const result = await engine.annotateBatch(['Anh vẫn yêu em', 'Đừng quên']);
+    expect(result).toEqual(['en:Anh vẫn yêu em', 'en:Đừng quên']);
+    expect(translator.translate).toHaveBeenCalledTimes(2);
+    expect(translator.destroy).not.toHaveBeenCalled();
+  });
+
+  it('annotateBatch rejects when ensureReady has not run', async () => {
+    (globalThis as any).Translator = { create: jest.fn() };
+    const engine = service.getTranslatorEngine(SPEC);
+    await expect(engine.annotateBatch(['a'])).rejects.toThrow();
+  });
+
+  it('concurrent ensureReady calls share a single translator creation', async () => {
+    const translator = fakeTranslator();
+    let resolveCreate!: (t: unknown) => void;
+    const create = jest.fn().mockReturnValue(new Promise((r) => (resolveCreate = r)));
+    (globalThis as any).Translator = { create };
+    const engine = service.getTranslatorEngine({ ...SPEC, id: 'vi-en-conc' });
+    const first = engine.ensureReady();
+    const second = engine.ensureReady();
+    resolveCreate(translator);
+    await Promise.all([first, second]);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed translator creation is retried by the next ensureReady', async () => {
+    const translator = fakeTranslator();
+    const create = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue(translator);
+    (globalThis as any).Translator = { create };
+    const engine = service.getTranslatorEngine({ ...SPEC, id: 'vi-en-retry' });
+    await expect(engine.ensureReady()).rejects.toThrow('boom');
+    await engine.ensureReady();
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('destroy invalidates stale in-flight creations so late settlement does not leak', async () => {
+    const t1 = fakeTranslator();
+    const t2 = fakeTranslator();
+    let resolveCreate!: (t: unknown) => void;
+    const create = jest
+      .fn()
+      .mockReturnValueOnce(new Promise((r) => (resolveCreate = r)))
+      .mockResolvedValueOnce(t2);
+    (globalThis as any).Translator = { create };
+    const engine = service.getTranslatorEngine({ ...SPEC, id: 'vi-en-epoch' });
+    const firstReady = engine.ensureReady();
+    engine.destroy();
+    await engine.ensureReady();
+    resolveCreate(t1);
+    await expect(firstReady).resolves.toBeUndefined();
+    expect(t1.destroy).toHaveBeenCalled();
+    const result = await engine.annotateBatch(['xin chào']);
+    expect(result).toEqual(['en:xin chào']);
+    expect(t2.translate).toHaveBeenCalled();
+    expect(t1.translate).not.toHaveBeenCalled();
+  });
+
+  it('getTranslatorEngine returns the same engine for the same id', () => {
+    (globalThis as any).Translator = { create: jest.fn() };
+    const a = service.getTranslatorEngine(SPEC);
+    const b = service.getTranslatorEngine(SPEC);
+    expect(b).toBe(a);
+  });
+});

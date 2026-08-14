@@ -9,8 +9,7 @@ export interface AnnotationLineState {
 export type AnnotationSupport = 'unknown' | 'unsupported' | 'supported';
 export type AnnotationDownloadState = 'idle' | 'downloading' | 'ready';
 
-/** Grows to `'prompt' | 'translator'` when translation pairs land. */
-export type AnnotatorKind = 'prompt';
+export type AnnotatorKind = 'prompt' | 'translator';
 
 export interface AnnotatorToggleConfig {
   /** Glyph rendered in the now-playing-bar toggle button (拼, あ). */
@@ -22,22 +21,37 @@ export interface AnnotatorToggleConfig {
 }
 
 /**
- * One language pair, declaratively. Adding a transliteration pair = one config
- * file + one entry in the ANNOTATORS registry; the store machinery is shared.
+ * One language pair, declaratively. Adding a pair = one config file + one
+ * entry in the ANNOTATORS registry; the store machinery is shared.
  */
-export interface AnnotatorConfig {
+export interface AnnotatorConfigBase {
   id: string;
   kind: AnnotatorKind;
-  /** Matched against the BCP-47 tag from LanguageDetector (e.g. 'zh-Hant', 'ja'). */
+  /** Matched against the BCP-47 tag from LanguageDetector (e.g. 'zh-Hant', 'vi'). */
   matchesLanguage(lang: string): boolean;
-  /** Which lines get an annotation entry (skips ♪ / Latin-only lines). */
+  /** Which lines get an annotation entry (skips ♪ / decoration-only lines). */
   lineQualifies(text: string): boolean;
+  toggle: AnnotatorToggleConfig;
+}
+
+/** Transliteration pair backed by the Prompt API (Gemini Nano). */
+export interface PromptAnnotatorConfig extends AnnotatorConfigBase {
+  kind: 'prompt';
   /** Passed to LanguageModel.availability() — support is checked per pair. */
   expectedLanguages: string[];
   systemPrompt: string;
   batchInstruction: string;
-  toggle: AnnotatorToggleConfig;
 }
+
+/** Translation pair backed by the Translator API. */
+export interface TranslatorAnnotatorConfig extends AnnotatorConfigBase {
+  kind: 'translator';
+  /** Passed to Translator.availability()/create() — support is checked per pair. */
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+export type AnnotatorConfig = PromptAnnotatorConfig | TranslatorAnnotatorConfig;
 
 export interface AnnotationState {
   enabled: boolean;

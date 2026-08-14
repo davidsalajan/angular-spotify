@@ -28,10 +28,24 @@ export interface PromptEngineSpec {
   batchInstruction: string;
 }
 
+/** What a translation annotator needs from the Translator API. */
+export interface TranslatorEngineSpec {
+  /** Annotator id — cache key; one translator lives per id. */
+  id: string;
+  /** BCP-47 tags passed to Translator.create (e.g. 'vi' → 'en'). */
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+export interface TranslatorInstance {
+  translate(input: string, opts?: { signal?: AbortSignal }): Promise<string>;
+  destroy(): void;
+}
+
 /**
- * A prepared annotation backend for one song. Today only the Prompt API
- * implementation exists (getPromptEngine); a Translator-API engine for
- * translation pairs implements the same interface later.
+ * A prepared annotation backend for one song. Two implementations exist:
+ * the Prompt API engine (getPromptEngine, transliteration pairs) and the
+ * Translator API engine (getTranslatorEngine, translation pairs).
  */
 export interface AnnotationEngine {
   ensureReady(opts?: CreateSessionOptions): Promise<void>;
@@ -55,6 +69,27 @@ declare global {
           }) => void;
           signal?: AbortSignal;
         }): Promise<AnnotationSession>;
+      }
+    | undefined;
+
+  // eslint-disable-next-line no-var
+  var Translator:
+    | {
+        availability(options: {
+          sourceLanguage: string;
+          targetLanguage: string;
+        }): Promise<AiAvailability>;
+        create(options: {
+          sourceLanguage: string;
+          targetLanguage: string;
+          monitor?: (m: {
+            addEventListener(
+              type: 'downloadprogress',
+              cb: (e: { loaded: number }) => void
+            ): void;
+          }) => void;
+          signal?: AbortSignal;
+        }): Promise<TranslatorInstance>;
       }
     | undefined;
 

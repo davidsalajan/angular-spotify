@@ -1,10 +1,11 @@
 import { ANNOTATORS, findAnnotatorForLanguage, getAnnotatorById } from './index';
 import { PINYIN_ANNOTATOR } from './pinyin.annotator';
 import { ROMAJI_ANNOTATOR } from './romaji.annotator';
+import { VI_EN_ANNOTATOR } from './vi-en.annotator';
 
 describe('annotator registry', () => {
-  it('registers pinyin and romaji', () => {
-    expect(ANNOTATORS).toEqual([PINYIN_ANNOTATOR, ROMAJI_ANNOTATOR]);
+  it('registers pinyin, romaji, and vi-en', () => {
+    expect(ANNOTATORS).toEqual([PINYIN_ANNOTATOR, ROMAJI_ANNOTATOR, VI_EN_ANNOTATOR]);
   });
 
   it('picks pinyin for zh variants', () => {
@@ -16,14 +17,19 @@ describe('annotator registry', () => {
     expect(findAnnotatorForLanguage('ja')).toBe(ROMAJI_ANNOTATOR);
   });
 
+  it('picks vi-en for vi', () => {
+    expect(findAnnotatorForLanguage('vi')).toBe(VI_EN_ANNOTATOR);
+  });
+
   it('returns null for languages with no annotator', () => {
     expect(findAnnotatorForLanguage('en')).toBeNull();
-    expect(findAnnotatorForLanguage('vi')).toBeNull();
+    expect(findAnnotatorForLanguage('ko')).toBeNull();
   });
 
   it('looks up annotators by id', () => {
     expect(getAnnotatorById('pinyin')).toBe(PINYIN_ANNOTATOR);
     expect(getAnnotatorById('romaji')).toBe(ROMAJI_ANNOTATOR);
+    expect(getAnnotatorById('vi-en')).toBe(VI_EN_ANNOTATOR);
     expect(getAnnotatorById('nope')).toBeNull();
   });
 });
@@ -58,5 +64,22 @@ describe('romaji annotator config', () => {
     expect(ROMAJI_ANNOTATOR.toggle.icon).toBe('あ');
     expect(ROMAJI_ANNOTATOR.toggle.preparingLabel).toBe('Preparing romaji…');
     expect(ROMAJI_ANNOTATOR.expectedLanguages).toEqual(['ja', 'en']);
+  });
+});
+
+describe('vi-en annotator config', () => {
+  it('qualifies any lettered line; skips decoration-only lines', () => {
+    expect(VI_EN_ANNOTATOR.lineQualifies('Anh vẫn yêu em')).toBe(true);
+    expect(VI_EN_ANNOTATOR.lineQualifies('Đừng quên')).toBe(true);
+    expect(VI_EN_ANNOTATOR.lineQualifies('♪')).toBe(false);
+    expect(VI_EN_ANNOTATOR.lineQualifies('...')).toBe(false);
+  });
+
+  it('declares the translator pair and toggle copy', () => {
+    expect(VI_EN_ANNOTATOR.kind).toBe('translator');
+    expect(VI_EN_ANNOTATOR.sourceLanguage).toBe('vi');
+    expect(VI_EN_ANNOTATOR.targetLanguage).toBe('en');
+    expect(VI_EN_ANNOTATOR.toggle.icon).toBe('EN');
+    expect(VI_EN_ANNOTATOR.toggle.preparingLabel).toBe('Preparing translation…');
   });
 });

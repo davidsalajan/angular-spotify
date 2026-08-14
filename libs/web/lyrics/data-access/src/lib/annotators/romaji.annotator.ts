@@ -1,7 +1,7 @@
-import { AnnotatorConfig } from '../annotation.models';
+import { PromptAnnotatorConfig } from '../annotation.models';
 import { containsJapanese } from '../script-util';
 
-export const ROMAJI_ANNOTATOR: AnnotatorConfig = {
+export const ROMAJI_ANNOTATOR: PromptAnnotatorConfig = {
   id: 'romaji',
   kind: 'prompt',
   matchesLanguage: (lang) => lang.startsWith('ja'),

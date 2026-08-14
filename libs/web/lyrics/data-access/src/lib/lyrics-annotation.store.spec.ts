@@ -19,6 +19,9 @@ describe('LyricsAnnotationStore — detection gating', () => {
   let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
+    isTranslatorApiAvailable: jest.Mock;
+    checkTranslatorAvailability: jest.Mock;
+    getTranslatorEngine: jest.Mock;
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
@@ -37,6 +40,9 @@ describe('LyricsAnnotationStore — detection gating', () => {
     engine = makeEngine();
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isTranslatorApiAvailable: jest.fn().mockReturnValue(true),
+      checkTranslatorAvailability: jest.fn().mockResolvedValue('available'),
+      getTranslatorEngine: jest.fn(() => engine),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
@@ -54,8 +60,9 @@ describe('LyricsAnnotationStore — detection gating', () => {
     store = TestBed.inject(LyricsAnnotationStore);
   });
 
-  it('marks support unsupported and stays silent when Prompt API is missing', async () => {
+  it('marks support unsupported and stays silent when both AI APIs are missing', async () => {
     ai.isPromptApiAvailable.mockReturnValue(false);
+    ai.isTranslatorApiAvailable.mockReturnValue(false);
     store.init([{ time: 0, text: '你好' }]);
     await flush();
     expect(read<boolean>(store.showToggle$)).toBe(false);
@@ -117,11 +124,51 @@ describe('LyricsAnnotationStore — detection gating', () => {
   });
 
   it('stays silent for a detected language with no registered annotator', async () => {
-    ai.detectLanguage.mockResolvedValue({ lang: 'vi', confidence: 0.99 });
-    store.init([{ time: 0, text: 'xin chào' }]);
+    ai.detectLanguage.mockResolvedValue({ lang: 'ko', confidence: 0.99 });
+    store.init([{ time: 0, text: '안녕하세요' }]);
     await flush();
     expect(read<boolean>(store.showToggle$)).toBe(false);
     expect(ai.checkAvailability).not.toHaveBeenCalled();
+  });
+
+  it('activates the vi-en translator for Vietnamese lyrics', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'vi', confidence: 0.95 });
+    engine.annotateBatch.mockResolvedValue(['I still love you']);
+    store.init([{ time: 0, text: 'Anh vẫn yêu em' }]);
+    await flush();
+    store.setActiveLine(0);
+    await flush();
+    await flush();
+    const map = read<Record<number, any>>(store.annotationByIndex$);
+    expect(map[0]).toEqual({ text: 'Anh vẫn yêu em', annotation: 'I still love you', status: 'done' });
+    // Availability and the engine come from the Translator API, not the Prompt API.
+    expect(ai.checkTranslatorAvailability).toHaveBeenCalledWith('vi', 'en');
+    expect(ai.getTranslatorEngine).toHaveBeenCalledWith({
+      id: 'vi-en',
+      sourceLanguage: 'vi',
+      targetLanguage: 'en'
+    });
+    expect(ai.checkAvailability).not.toHaveBeenCalled();
+    expect(ai.getPromptEngine).not.toHaveBeenCalled();
+  });
+
+  it('stays silent for Vietnamese when the Translator pair is unavailable', async () => {
+    ai.detectLanguage.mockResolvedValue({ lang: 'vi', confidence: 0.95 });
+    ai.checkTranslatorAvailability.mockResolvedValue('unavailable');
+    store.init([{ time: 0, text: 'Anh vẫn yêu em' }]);
+    await flush();
+    expect(read<boolean>(store.showToggle$)).toBe(false);
+    expect(read<string | null>(store.pageStatusText$)).toBeNull();
+    expect(ai.getTranslatorEngine).not.toHaveBeenCalled();
+  });
+
+  it('still detects when only the Translator API is present (Prompt API missing)', async () => {
+    ai.isPromptApiAvailable.mockReturnValue(false);
+    ai.detectLanguage.mockResolvedValue({ lang: 'vi', confidence: 0.95 });
+    store.init([{ time: 0, text: 'Anh vẫn yêu em' }]);
+    await flush();
+    expect(ai.detectLanguage).toHaveBeenCalled();
+    expect(ai.checkTranslatorAvailability).toHaveBeenCalledWith('vi', 'en');
   });
 
   it('stays silent when detection matches an annotator but no lines qualify (already-romanized lyrics)', async () => {
@@ -157,6 +204,9 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
   let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
+    isTranslatorApiAvailable: jest.Mock;
+    checkTranslatorAvailability: jest.Mock;
+    getTranslatorEngine: jest.Mock;
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
@@ -184,6 +234,9 @@ describe('LyricsAnnotationStore — windowing, queue, cache', () => {
     engine = makeEngine();
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isTranslatorApiAvailable: jest.fn().mockReturnValue(true),
+      checkTranslatorAvailability: jest.fn().mockResolvedValue('available'),
+      getTranslatorEngine: jest.fn(() => engine),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
@@ -328,6 +381,9 @@ describe('LyricsAnnotationStore — warm-up/drain shared session creation', () =
   let store: LyricsAnnotationStore;
   let ai: {
     isPromptApiAvailable: jest.Mock;
+    isTranslatorApiAvailable: jest.Mock;
+    checkTranslatorAvailability: jest.Mock;
+    getTranslatorEngine: jest.Mock;
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
@@ -339,6 +395,9 @@ describe('LyricsAnnotationStore — warm-up/drain shared session creation', () =
     lyrics$ = new BehaviorSubject<LyricLine[] | null>(null);
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isTranslatorApiAvailable: jest.fn().mockReturnValue(true),
+      checkTranslatorAvailability: jest.fn().mockResolvedValue('available'),
+      getTranslatorEngine: jest.fn(),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
@@ -426,6 +485,9 @@ describe('LyricsAnnotationStore — track change', () => {
     };
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isTranslatorApiAvailable: jest.fn().mockReturnValue(true),
+      checkTranslatorAvailability: jest.fn().mockResolvedValue('available'),
+      getTranslatorEngine: jest.fn(() => engine),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),
@@ -565,6 +627,9 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
   let engine: ReturnType<typeof makeEngine>;
   let ai: {
     isPromptApiAvailable: jest.Mock;
+    isTranslatorApiAvailable: jest.Mock;
+    checkTranslatorAvailability: jest.Mock;
+    getTranslatorEngine: jest.Mock;
     isDetectorAvailable: jest.Mock;
     checkAvailability: jest.Mock;
     detectLanguage: jest.Mock;
@@ -601,6 +666,9 @@ describe('LyricsAnnotationStore — toggle visibility and page status', () => {
     engine.annotateBatch.mockResolvedValue(Array(8).fill('pīn yīn'));
     ai = {
       isPromptApiAvailable: jest.fn().mockReturnValue(true),
+      isTranslatorApiAvailable: jest.fn().mockReturnValue(true),
+      checkTranslatorAvailability: jest.fn().mockResolvedValue('available'),
+      getTranslatorEngine: jest.fn(() => engine),
       isDetectorAvailable: jest.fn().mockReturnValue(true),
       checkAvailability: jest.fn().mockResolvedValue('available'),
       detectLanguage: jest.fn().mockResolvedValue({ lang: 'zh', confidence: 0.95 }),

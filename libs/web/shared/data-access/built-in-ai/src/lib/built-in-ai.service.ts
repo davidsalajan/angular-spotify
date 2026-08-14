@@ -6,7 +6,9 @@ import {
   CreateSessionOptions,
   DetectorInstance,
   LanguageDetectionResult,
-  PromptEngineSpec
+  PromptEngineSpec,
+  TranslatorEngineSpec,
+  TranslatorInstance
 } from './built-in-ai.types';
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +25,24 @@ export class BuiltInAiService {
 
   isDetectorAvailable(): boolean {
     return typeof globalThis.LanguageDetector !== 'undefined';
+  }
+
+  isTranslatorApiAvailable(): boolean {
+    return typeof globalThis.Translator !== 'undefined';
+  }
+
+  async checkTranslatorAvailability(
+    sourceLanguage: string,
+    targetLanguage: string
+  ): Promise<AiAvailability> {
+    if (!globalThis.Translator) {
+      return 'unavailable';
+    }
+    try {
+      return await globalThis.Translator.availability({ sourceLanguage, targetLanguage });
+    } catch {
+      return 'unavailable';
+    }
   }
 
   async checkAvailability(languages: string[]): Promise<AiAvailability> {
@@ -159,6 +179,96 @@ export class BuiltInAiService {
         epoch++;
         session?.destroy();
         session = null;
+        creating = null;
+      }
+    };
+  }
+
+  /**
+   * The Translator API engine for one annotator. Cached by spec.id like the
+   * prompt engines: the translator survives track changes, so the second song
+   * in the same language starts warm.
+   */
+  getTranslatorEngine(spec: TranslatorEngineSpec): AnnotationEngine {
+    let engine = this.engines.get(spec.id);
+    if (!engine) {
+      engine = this.buildTranslatorEngine(spec);
+      this.engines.set(spec.id, engine);
+    }
+    return engine;
+  }
+
+  private async createTranslator(
+    spec: TranslatorEngineSpec,
+    opts: CreateSessionOptions = {}
+  ): Promise<TranslatorInstance> {
+    if (!this.isTranslatorApiAvailable()) {
+      throw new Error('Translator API unavailable');
+    }
+    const t0 = performance.now();
+    const translator = await globalThis.Translator!.create({
+      sourceLanguage: spec.sourceLanguage,
+      targetLanguage: spec.targetLanguage,
+      signal: opts.signal,
+      monitor: (m) =>
+        m.addEventListener('downloadprogress', (e) => opts.onDownloadProgress?.(e.loaded))
+    });
+    console.log(`[BuiltInAI] createTranslator: ${(performance.now() - t0).toFixed(1)}ms`);
+    return translator;
+  }
+
+  private buildTranslatorEngine(spec: TranslatorEngineSpec): AnnotationEngine {
+    let translator: TranslatorInstance | null = null;
+    let creating: Promise<void> | null = null;
+    let epoch = 0;
+    return {
+      // Same memoization as the prompt engine: warm-up and first drain share
+      // one Translator.create().
+      ensureReady: (opts: CreateSessionOptions = {}) => {
+        if (translator) {
+          return Promise.resolve();
+        }
+        if (!creating) {
+          const started = epoch;
+          creating = this.createTranslator(spec, opts).then(
+            (t) => {
+              if (started !== epoch) {
+                t.destroy(); // destroy() superseded this creation — don't adopt, don't leak
+                return;
+              }
+              translator = t;
+              creating = null;
+            },
+            (err) => {
+              if (started === epoch) {
+                creating = null;
+              }
+              throw err;
+            }
+          );
+        }
+        return creating;
+      },
+      // Translators carry no conversation state, so batches run directly on
+      // the cached instance — no clone dance needed.
+      annotateBatch: async (lines: string[], signal?: AbortSignal) => {
+        if (!translator) {
+          throw new Error('Annotation engine not ready');
+        }
+        const t0 = performance.now();
+        const results: string[] = [];
+        for (const line of lines) {
+          results.push(await translator.translate(line, { signal }));
+        }
+        console.log(
+          `[BuiltInAI] translateBatch ← ${(performance.now() - t0).toFixed(1)}ms for ${lines.length} lines`
+        );
+        return results;
+      },
+      destroy: () => {
+        epoch++;
+        translator?.destroy();
+        translator = null;
         creating = null;
       }
     };
