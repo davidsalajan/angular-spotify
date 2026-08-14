@@ -11,6 +11,15 @@ export function containsHan(text: string): boolean {
 }
 
 /**
+ * True when a line contains any Unicode letter. Vietnamese is Latin-script,
+ * so script-range filtering can't apply to translation pairs; this only skips
+ * decoration-only lines (♪, "…", empty punctuation).
+ */
+export function containsLetters(text: string): boolean {
+  return /\p{L}/u.test(text);
+}
+
+/**
  * True when a line contains any Japanese script — kana, or kanji (which are
  * Han-block codepoints). Song-level language detection decides ja vs zh; this
  * only filters out lines with nothing to romanize (Latin, ♪, "Instrumental").

@@ -102,7 +102,10 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
 
   init(lines: LyricLine[]): void {
     this.reset();
-    if (!this.ai.isPromptApiAvailable()) {
+    // Either backend may exist without the other (Prompt API is flag-gated,
+    // Translator ships wider); which one the matched pair needs is checked
+    // per config in detectAndSeed.
+    if (!this.ai.isPromptApiAvailable() && !this.ai.isTranslatorApiAvailable()) {
       this.patchState({ support: 'unsupported' });
       return;
     }
@@ -126,8 +129,12 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
       this.patchState({ activeAnnotatorId: null });
       return;
     }
-    // Support is per pair: Gemini Nano may be available for zh but not ja.
-    const availability = await this.ai.checkAvailability(config.expectedLanguages);
+    // Support is per pair: Gemini Nano may be available for zh but not ja,
+    // and translation pairs ask the Translator API instead of the Prompt API.
+    const availability =
+      config.kind === 'translator'
+        ? await this.ai.checkTranslatorAvailability(config.sourceLanguage, config.targetLanguage)
+        : await this.ai.checkAvailability(config.expectedLanguages);
     if (gen !== this.generation) return;
     if (availability === 'unavailable') {
       this.patchState({ support: 'unsupported', activeAnnotatorId: null });
@@ -204,16 +211,20 @@ export class LyricsAnnotationStore extends ComponentStore<AnnotationState> {
 
   private createEngineFor(config: AnnotatorConfig): AnnotationEngine {
     switch (config.kind) {
-      // 'prompt' is the only engine today; a future 'translator' kind adds a
-      // case here without touching the drain machinery.
       case 'prompt':
         return this.ai.getPromptEngine({
           id: config.id,
           systemPrompt: config.systemPrompt,
           batchInstruction: config.batchInstruction
         });
+      case 'translator':
+        return this.ai.getTranslatorEngine({
+          id: config.id,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage
+        });
       default:
-        throw new Error(`No annotation engine for kind: ${config.kind as string}`);
+        throw new Error(`No annotation engine for kind: ${(config as AnnotatorConfig).kind}`);
     }
   }
 
